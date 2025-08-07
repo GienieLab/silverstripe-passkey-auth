@@ -117,20 +117,20 @@ class PasskeyService
         $this->algorithmManager->add(new RSA\PS384());
         $this->algorithmManager->add(new RSA\PS512());
         
+        // Create attestation statement support manager
+        $attestationStatementSupportManager = AttestationStatementSupportManager::create();
+        
         // Create ceremony step manager factory
         $ceremonyStepManagerFactory = new CeremonyStepManagerFactory();
         $ceremonyStepManagerFactory->setAlgorithmManager($this->algorithmManager);
         
-        // Create validators with different ceremony managers
+        // Create validators with correct parameters
         $this->attestationValidator = AuthenticatorAttestationResponseValidator::create(
-            $ceremonyStepManagerFactory->creationCeremony()
+            $attestationStatementSupportManager
         );
-        $this->assertionValidator = AuthenticatorAssertionResponseValidator::create(
-            $ceremonyStepManagerFactory->requestCeremony()
-        );
+        $this->assertionValidator = AuthenticatorAssertionResponseValidator::create();
         
         // Create attestation object loader
-        $attestationStatementSupportManager = AttestationStatementSupportManager::create();
         $this->attestationObjectLoader = AttestationObjectLoader::create($attestationStatementSupportManager);
         
         // Create authenticator data loader

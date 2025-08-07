@@ -4,5 +4,6 @@ After: 'framework/routes#coreroutes'
 ---
 SilverStripe\Control\Director:
   rules:
-    'passkey-auth': 'GienieLab\PasskeyAuth\Controller\PasskeyAuthController'
+    'passkey-auth//$Action/$ID/$OtherID': 'GienieLab\PasskeyAuth\Controller\PasskeyAuthController'
+    'passkey-debug': 'GienieLab\PasskeyAuth\Controller\PasskeyDebugPageController'
     'passkey-management': 'GienieLab\PasskeyAuth\Controller\PasskeyManagementController'

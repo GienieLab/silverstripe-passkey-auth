@@ -1,3 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passkey Debug Information</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .debug-section { 
+            background: #f5f5f5; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 8px; 
+            border-left: 4px solid #007acc;
+        }
+        .error { border-left-color: #dc3545; }
+        .success { border-left-color: #28a745; }
+        .warning { border-left-color: #ffc107; }
+        pre { background: #fff; padding: 15px; border-radius: 4px; overflow-x: auto; }
+        button { padding: 10px 20px; margin: 10px 5px 0 0; cursor: pointer; }
+    </style>
+</head>
+<body>
 <div class="passkey-management">
     <div class="container">
         <h1>Manage Your Passkeys</h1>
@@ -97,3 +120,5 @@
 <% require javascript('gienielab/silverstripe-passkey-auth:client/dist/js/passkey-auth.js') %>
 <% require javascript('gienielab/silverstripe-passkey-auth:client/dist/js/passkey-management.js') %>
 <% require css('gienielab/silverstripe-passkey-auth:client/dist/css/styles.css') %>
+</body>
+</html>

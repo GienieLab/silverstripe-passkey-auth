@@ -21,12 +21,10 @@ class PasskeyManagementController extends ContentController
     ];
 
     private static $url_handlers = [
-        '' => 'index',
         'delete/$ID' => 'delete',
         'list' => 'list'
     ];
 
-    private static $url_segment = 'passkey-management';
 
     /**
      * Display passkey management interface
@@ -48,7 +46,7 @@ class PasskeyManagementController extends ContentController
             'Member' => $member,
             'PasskeyCredentials' => $credentials,
             'CanRegisterNew' => true
-        ])->renderWith(['GienieLab\Includes\PasskeyManagement', 'Page']);
+        ])->renderWith(['Includes\PasskeyManagement', 'Page']);
     }
 
     /**

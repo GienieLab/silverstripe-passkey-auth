@@ -2,10 +2,7 @@
 Name: gienie-passkey-auth
 ---
 
-SilverStripe\Control\Director:
-  rules:
-    'passkey-auth//$Action/$ID/$OtherID': 'GienieLab\PasskeyAuth\Controller\PasskeyAuthController'
-    'passkey-debug': 'GienieLab\PasskeyAuth\Controller\PasskeyDebugPageController'
+
 
 SilverStripe\Security\Member:
   extensions:
