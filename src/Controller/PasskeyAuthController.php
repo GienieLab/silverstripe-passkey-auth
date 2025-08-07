@@ -84,7 +84,7 @@ class PasskeyAuthController extends Controller
             $request->getSession()->set('passkey_challenge', $getArgsArray['challenge']);
             
             // Preserve BackURL if provided
-            $backURL = RequestHandler::sgetBackURL($request);
+            $backURL = $this->getCustomBackURL($request);
             if ($backURL) {
                 $request->getSession()->set('BackURL', $backURL);
             }
@@ -248,7 +248,7 @@ class PasskeyAuthController extends Controller
             $request->getSession()->clear('passkey_challenge');
 
             // Determine redirect URL with BackURL support
-            $backURL = RequestHandler::getBackURL($request);
+            $backURL = $this->getCustomBackURL($request);
             $redirectURL = $backURL ?: Security::config()->get('default_login_dest') ?: Director::baseURL();
             
             // Clear BackURL from session to prevent reuse
@@ -290,7 +290,7 @@ class PasskeyAuthController extends Controller
      * @param HTTPRequest $request
      * @return string|null
      */
-    public function getCustomBackURL(HTTPRequest $request)
+    protected function getCustomBackURL(HTTPRequest $request)
     {
         // 1. Check request parameter (highest priority)
         $backURL = $request->getVar('BackURL');
