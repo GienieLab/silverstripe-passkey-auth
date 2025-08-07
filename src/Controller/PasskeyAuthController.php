@@ -304,13 +304,7 @@ class PasskeyAuthController extends Controller
             return $backURL;
         }
         
-        // 3. Check custom header (for AJAX requests)
-        $backURL = $request->getHeader('X-Backurl');
-        if ($backURL) {
-            return $backURL;
-        }
-        
-        // 4. Parse BackURL from referer query string (if present)
+        // 3. Parse BackURL from referer query string (if present)
         $referer = $request->getHeader('Referer');
         if ($referer) {
             $parsedUrl = parse_url($referer);
@@ -322,6 +316,15 @@ class PasskeyAuthController extends Controller
                 }
             }
         }
+        
+        // 4. Check custom header (for AJAX requests)
+        $backURL = $request->getHeader('X-Backurl');
+        if ($backURL) {
+            return $backURL;
+        }
+        
+       
+        
         
         return null;
     }
