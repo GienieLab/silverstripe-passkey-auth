@@ -292,19 +292,7 @@ class PasskeyAuthController extends Controller
      */
     protected function getCustomBackURL(HTTPRequest $request)
     {
-        // 1. Check request parameter (highest priority)
-        $backURL = $request->getVar('BackURL');
-        if ($backURL) {
-            return $backURL;
-        }
         
-        // 2. Check session storage
-        $backURL = $request->getSession()->get('BackURL');
-        if ($backURL) {
-            return $backURL;
-        }
-        
-        // 3. Parse BackURL from referer query string (if present)
         $referer = $request->getHeader('Referer');
         if ($referer) {
             $parsedUrl = parse_url($referer);
@@ -316,17 +304,9 @@ class PasskeyAuthController extends Controller
                 }
             }
         }
-        
-        // 4. Check custom header (for AJAX requests)
-        $backURL = $request->getHeader('X-Backurl');
-        if ($backURL) {
-            return $backURL;
-        }
-        
        
         
-        
-        return null;
+        return RequestHandler::getBackURL();
     }
     
     /**
