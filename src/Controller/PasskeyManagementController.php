@@ -48,7 +48,7 @@ class PasskeyManagementController extends ContentController
             'Member' => $member,
             'PasskeyCredentials' => $credentials,
             'CanRegisterNew' => true
-        ])->renderWith(['PasskeyManagement', 'Page']);
+        ])->renderWith(['GienieLab\Includes\PasskeyManagement', 'Page']);
     }
 
     /**

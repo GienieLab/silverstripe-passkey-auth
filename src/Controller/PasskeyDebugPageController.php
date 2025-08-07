@@ -16,6 +16,6 @@ class PasskeyDebugPageController extends ContentController
         }
         Requirements::css('gienielab/silverstripe-passkey-auth:client/dist/css/styles.css');
 
-        return $this->renderWith(['PasskeyDebugPage', 'Page']);
+        return $this->renderWith(['GienieLab\Includes\PasskeyDebugPage', 'Page']);
     }
 }

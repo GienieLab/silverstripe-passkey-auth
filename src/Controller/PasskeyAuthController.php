@@ -379,7 +379,7 @@ class PasskeyAuthController extends Controller
         }
         
         // Render the passkey registration page
-        return $this->renderWith(['WebAuthRegistration', 'Security_login', 'Security', 'Page']);
+        return $this->renderWith(['GienieLab\Includes\WebAuthRegistration', 'Security', 'Page']);
     }
 
     /**
