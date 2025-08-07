@@ -380,7 +380,7 @@ class PasskeyAuthController extends Controller
         }
         
         // Render the passkey registration page
-        return $this->renderWith(['Includes\WebAuthRegistration', 'Security', 'Page']);
+        return $this->renderWith(['WebAuthRegistration', 'Security', 'Page']);
     }
 
     /**

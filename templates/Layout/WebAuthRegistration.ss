@@ -1,5 +1,5 @@
 <% require javascript('gienielab/silverstripe-passkey-auth:client/dist/js/passkey-auth.js') %>
-<% require css('gienielab/silverstripe-passkey-auth:client/dist/css/passkey-register-styles.css') %>
+<% require css('gienielab/silverstripe-passkey-auth:client/dist/css/styles.css') %>
 
 <div class="security-page-wrapper">
     <div class="passkey-registration-container">
