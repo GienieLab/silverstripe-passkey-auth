@@ -1,0 +1,8 @@
+---
+Name: passkey-routes
+After: 'framework/routes#coreroutes'
+---
+SilverStripe\Control\Director:
+  rules:
+    'passkey-auth': 'GienieLab\PasskeyAuth\Controller\PasskeyAuthController'
+    'passkey-management': 'GienieLab\PasskeyAuth\Controller\PasskeyManagementController'

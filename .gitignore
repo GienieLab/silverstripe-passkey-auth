@@ -1,0 +1,36 @@
+# Dependencies
+/vendor/
+/node_modules/
+
+/vendor/
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# SilverStripe specific
+.env
+_ss_environment.php
+
+# Testing
+/tests/coverage/
+/.phpunit.result.cache
+
+# Package manager files
+composer.lock
+package-lock.json
+yarn.lock

@@ -1,0 +1,39 @@
+# Example environment-specific passkey configuration
+# Copy this to your app/_config/ directory and customize as needed
+
+# ---
+# Name: passkey-environment-config
+# Only:
+#   Environment: 'dev'
+# ---
+# # Development environment settings
+# GienieLab\PasskeyAuth\Service\PasskeyService:
+#   rp_name: 'Gienie Creative Agency (DEV)'
+#   rp_id: 'dev.gienie'
+#   timeout: 120  # Longer timeout for development
+#   require_user_verification: false  # More lenient for development
+
+# ---
+# Name: passkey-production-config
+# Only:
+#   Environment: 'live'
+# ---
+# # Production environment settings
+# GienieLab\PasskeyAuth\Service\PasskeyService:
+#   rp_name: 'Gienie Creative Agency'
+#   rp_id: 'gienie.com.au'
+#   timeout: 60
+#   require_user_verification: true
+#   require_user_presence: true
+
+# ---
+# Name: passkey-test-config
+# Only:
+#   Environment: 'test'
+# ---
+# # Test environment settings
+# GienieLab\PasskeyAuth\Service\PasskeyService:
+#   rp_name: 'Gienie Creative Agency (TEST)'
+#   rp_id: 'test.gienie.com.au'
+#   timeout: 30
+#   require_user_verification: false

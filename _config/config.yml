@@ -1,0 +1,76 @@
+---
+Name: gienie-passkey-auth
+---
+
+SilverStripe\Control\Director:
+  rules:
+    'passkey-auth//$Action/$ID/$OtherID': 'GienieLab\PasskeyAuth\Controller\PasskeyAuthController'
+    'passkey-debug': 'GienieLab\PasskeyAuth\Controller\PasskeyDebugPageController'
+
+SilverStripe\Security\Member:
+  extensions:
+    - GienieLab\PasskeyAuth\Extension\MemberPasskeyExtension
+
+# SilverStripe\Security\MemberAuthenticator\LoginHandler:
+#   extensions:
+#     - GienieLab\PasskeyAuth\Extension\LoginHandlerExtension
+
+PageController:
+  extensions:
+    - GienieLab\PasskeyAuth\Extension\PageControllerExtension
+
+SilverStripe\Security\Security:
+  authenticators:
+    PasskeyAuth: '%$GienieLab\PasskeyAuth\Authenticator\PasskeyAuthenticator'
+    MemberAuth: '%$SilverStripe\Security\MemberAuthenticator\MemberAuthenticator'
+
+---
+Name: gienie-passkey-auth-injector
+---
+SilverStripe\Core\Injector\Injector:
+  SilverStripe\Security\MemberAuthenticator\LoginHandler:
+      class: GienieLab\PasskeyAuth\Injector\CustomLoginHandler
+  # SilverStripe\Security\MemberAuthenticator\MemberLoginForm:
+  #   class: 'GienieLab\PasskeyAuth\Form\PasskeyLoginForm'
+  GienieLab\PasskeyAuth\Service\PasskeyService:
+    class: 'GienieLab\PasskeyAuth\Service\PasskeyService'
+
+---
+Name: passkey-environment-config
+Only:
+  Environment: 'dev'
+---
+# Passkey Authentication Configuration
+GienieLab\PasskeyAuth\Service\PasskeyService:
+  # Relying Party Name - displayed to users during authentication
+  rp_name: 'Development Site'
+  
+  # Relying Party ID - domain for the credential (leave null to auto-detect)
+  # For production, set this to your domain: 'gienie.com.au'
+  # For development, leave commented out to auto-detect current domain
+  # NOTE: Firefox may have issues with custom development domains like 'dev.gienie'
+  # Consider testing with Chrome/Safari for development, or use localhost
+  # rp_id: 'dev.gienie'
+  
+  # Timeout for authentication/registration in seconds
+  timeout: 60
+  
+  # Require user verification (PIN, biometric, etc.)
+  require_user_verification: preferred
+  
+  # Require user presence (user must be present for authentication)
+  require_user_presence: true
+
+---
+Name: passkey-production-config
+Only:
+  Environment: 'live'
+---
+# Production environment settings
+GienieLab\PasskeyAuth\Service\PasskeyService:
+  rp_name: 'Gienie Creative Agency'
+  rp_id: 'gienie.com.au'
+  timeout: 60
+  require_user_verification: true
+  require_user_presence: true
+

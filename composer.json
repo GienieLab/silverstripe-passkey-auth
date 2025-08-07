@@ -1,0 +1,60 @@
+{
+    "name": "gienielab/silverstripe-passkey-auth",
+    "description": "A comprehensive passkey (WebAuthn) authentication module for SilverStripe with secure, passwordless authentication using biometrics, security keys, or device authentication.",
+    "type": "silverstripe-vendormodule",
+    "keywords": [
+        "silverstripe",
+        "webauthn",
+        "passkey",
+        "authentication",
+        "passwordless",
+        "biometric",
+        "security",
+        "fido2"
+    ],
+    "homepage": "https://github.com/gienielab/silverstripe-passkey-auth",
+    "license": "BSD-3-Clause",
+    "authors": [
+        {
+            "name": "Gienie Creative Agency",
+            "email": "hello@gienie.com"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "silverstripe/framework": "^5.0 || ^6.0",
+        "web-auth/webauthn-lib": "^4.0",
+        "web-auth/cose-lib": "^4.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5 || ^10.0",
+        "squizlabs/php_codesniffer": "^3.7",
+        "silverstripe/standards": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "GienieLab\\PasskeyAuth\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "GienieLab\\PasskeyAuth\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "expose": [
+            "client/dist"
+        ],
+        "silverstripe": {
+            "project": false
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "allow-plugins": {
+            "composer/installers": true,
+            "silverstripe/vendor-plugin": true
+        }
+    }
+}
