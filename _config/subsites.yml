@@ -1,0 +1,31 @@
+---
+Name: passkey-subsites-integration
+After:
+  - 'passkey-auth'
+  - 'subsites'
+Only:
+  classexists: 'SilverStripe\Subsites\Model\Subsite'
+---
+
+# Enable dynamic subsite support for PasskeyAuth
+# RP ID and RP Name are automatically determined from subsite domains and titles
+GienieLab\PasskeyAuth\Service\PasskeyService:
+  extensions:
+    - GienieLab\PasskeyAuth\Extension\SubsitePasskeyExtension
+
+GienieLab\PasskeyAuth\Model\PasskeyCredential:
+  extensions:
+    - GienieLab\PasskeyAuth\Extension\PasskeyCredentialSubsiteExtension
+
+# Optional: Default configuration for main site (subsite ID 0)
+# These will be used as fallbacks when no subsite-specific config is available
+---
+Name: passkey-main-site-defaults
+Only:
+  classexists: 'SilverStripe\Subsites\Model\Subsite'
+  subsiteid: 0  # Main site only
+---
+GienieLab\PasskeyAuth\Service\PasskeyService:
+  # These are fallback values when dynamic detection fails
+  rp_name: 'Main Site'
+  # rp_id: 'example.com'  # Uncomment and set if you need to override dynamic detection

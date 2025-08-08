@@ -10,27 +10,127 @@
 
 .security-page-wrapper {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f6f4f0 0%, #f9f7f4 100%);
+  background: var(--primary-colour);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
   font-family: "Poppins", -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+
+  // Responsive Design
+  @media (max-width: 480px) {
+    padding: 16px;
+  }
 }
 
 /* Dedicated Registration Page Styles */
-.passkey-registration-container {
-  max-width: 520px;
-  width: 100%;
-}
+.passkey-registration {
+  &-container {
+    max-width: 520px;
+    width: 100%;
+  }
 
-.passkey-registration-card {
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
-  padding: 48px 40px;
-  text-align: center;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  &-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+    padding: 48px 40px;
+    text-align: center;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+
+    h1 {
+      color: var(--primary-colour);
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      line-height: 1.2;
+
+      @media (max-width: 480px) {
+        font-size: 24px;
+      }
+    }
+
+    .subtitle {
+      color: #6b7280;
+      font-size: 18px;
+      margin-bottom: 32px;
+      line-height: 1.5;
+
+      @media (max-width: 480px) {
+        font-size: 16px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      padding: 24px 20px;
+    }
+  }
+
+  &-content {
+    margin-bottom: 32px;
+    text-align: left;
+
+    p {
+      color: #374151;
+      font-size: 16px;
+      line-height: 1.6;
+      margin-bottom: 16px;
+
+      &:first-child {
+        font-size: 18px;
+        color: #111827;
+      }
+
+      @media (max-width: 480px) {
+        font-size: 15px;
+      }
+    }
+  }
+
+  &-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 24px;
+
+    @media (max-width: 480px) {
+      gap: 12px;
+    }
+  }
+
+  &-status {
+    text-align: center;
+    padding: 16px 20px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    margin-top: 20px;
+    opacity: 0;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+
+    &--loading {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      color: #92400e;
+      border-color: #fbbf24;
+      opacity: 1;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    &--success {
+      background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+      color: #065f46;
+      border-color: #10b981;
+      opacity: 1;
+    }
+
+    &--error {
+      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+      color: #991b1b;
+      border-color: #ef4444;
+      opacity: 1;
+    }
+  }
 }
 
 .passkey-icon-large {
@@ -38,38 +138,11 @@
   margin-bottom: 24px;
   animation: fingerprint-pulse 3s ease-in-out infinite;
   display: inline-block;
-}
 
-.passkey-registration-card h1 {
-  color: var(--primary-colour);
-  font-size: 32px;
-  font-weight: 700;
-  margin-bottom: 12px;
-  line-height: 1.2;
-}
-
-.passkey-registration-card .subtitle {
-  color: #6b7280;
-  font-size: 18px;
-  margin-bottom: 32px;
-  line-height: 1.5;
-}
-
-.passkey-registration-content {
-  margin-bottom: 32px;
-  text-align: left;
-}
-
-.passkey-registration-content p {
-  color: #374151;
-  font-size: 16px;
-  line-height: 1.6;
-  margin-bottom: 16px;
-}
-
-.passkey-registration-content p:first-child {
-  font-size: 18px;
-  color: #111827;
+  @media (max-width: 480px) {
+    font-size: 48px;
+    margin-bottom: 20px;
+  }
 }
 
 .passkey-benefits {
@@ -78,33 +151,41 @@
   padding: 24px;
   margin: 24px 0;
   border: 1px solid #e2e8f0;
-}
 
-.passkey-benefits h3 {
-  color: var(--primary-colour);
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 16px;
-  text-align: center;
-}
+  h3 {
+    color: var(--primary-colour);
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    text-align: center;
+  }
 
-.passkey-benefits ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
 
-.passkey-benefits li {
-  display: flex;
-  align-items: center;
-  padding: 8px 0;
-  font-size: 16px;
-  color: #374151;
-  font-weight: 500;
-}
+  li {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    font-size: 16px;
+    color: #374151;
+    font-weight: 500;
 
-.passkey-benefits li:first-child {
-  margin-top: 0;
+    &:first-child {
+      margin-top: 0;
+    }
+
+    @media (max-width: 480px) {
+      font-size: 15px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    padding: 20px 16px;
+  }
 }
 
 .passkey-email {
@@ -115,13 +196,6 @@
   color: #1e40af;
   font-size: 16px;
   margin-top: 20px;
-}
-
-.passkey-registration-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-bottom: 24px;
 }
 
 .passkey-button {
@@ -139,74 +213,60 @@
   text-decoration: none;
   width: 100%;
   box-sizing: border-box;
-}
 
-.passkey-button--primary {
-  background: linear-gradient(135deg, var(--primary-colour) 0%, var(--secondary-colour) 100%);
-  color: #fff;
-  border-color: var(--primary-colour);
-  box-shadow: 0 4px 16px rgba(var(--primary-colour-rgb), 0.3);
-}
+  &--primary {
+    background: linear-gradient(135deg, var(--primary-colour) 0%, var(--secondary-colour) 100%);
+    color: #fff;
+    border-color: var(--primary-colour);
+    box-shadow: 0 4px 16px rgba(var(--primary-colour-rgb), 0.3);
 
-.passkey-button--primary:hover,
-.passkey-button--primary:focus {
-  background: transparent;
-  color: var(--primary-colour);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(var(--primary-colour-rgb), 0.4);
-}
+    &:hover,
+    &:focus {
+      background: transparent;
+      color: var(--primary-colour);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(var(--primary-colour-rgb), 0.4);
+    }
 
-.passkey-button--primary .passkey-icon {
-  font-size: 20px;
-}
+    .passkey-icon {
+      font-size: 20px;
+    }
+  }
 
-.passkey-button--secondary {
-  background: #f8fafc;
-  color: #64748b;
-  border-color: #e2e8f0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
+  &--secondary {
+    background: #f8fafc;
+    color: #64748b;
+    border: none;
+    padding: 16px 32px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto 24px;
+    box-shadow: 0 8px 25px rgba(var(--primary-colour-rgb), 0.3);
+    position: relative;
+    overflow: hidden;
 
-.passkey-button--secondary:hover,
-.passkey-button--secondary:focus {
-  background: #e2e8f0;
-  color: #475569;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
+    &:hover,
+    &:focus {
+      background: #e2e8f0;
+      color: #475569;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+  }
 
-.passkey-registration-status {
-  text-align: center;
-  padding: 16px 20px;
-  border-radius: 10px;
-  font-size: 15px;
-  font-weight: 600;
-  margin-top: 20px;
-  opacity: 0;
-  transition: all 0.3s ease;
-  border: 2px solid transparent;
-}
-
-.passkey-registration-status--loading {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  color: #92400e;
-  border-color: #fbbf24;
-  opacity: 1;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-.passkey-registration-status--success {
-  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-  color: #065f46;
-  border-color: #10b981;
-  opacity: 1;
-}
-
-.passkey-registration-status--error {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #991b1b;
-  border-color: #ef4444;
-  opacity: 1;
+  @media (max-width: 480px) {
+    padding: 14px 20px;
+    font-size: 15px;
+  }
 }
 
 /* Message Styles */
@@ -215,99 +275,25 @@
   border-radius: 8px;
   margin-bottom: 20px;
   font-weight: 500;
-}
 
-.message.good {
-  background: #d1fae5;
-  color: #065f46;
-  border: 1px solid #a7f3d0;
-}
-
-.message.bad,
-.message.error {
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-}
-
-.message.warning {
-  background: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fde68a;
-}
-
-/* Responsive Design */
-@media (max-width: 480px) {
-  .security-page-wrapper {
-    padding: 16px;
+  &.good {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
   }
 
-  .passkey-registration-card {
-    padding: 24px 20px;
+  &.bad,
+  &.error {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
   }
 
-  .passkey-registration-card h1 {
-    font-size: 24px;
+  &.warning {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
   }
-
-  .passkey-registration-card .subtitle {
-    font-size: 16px;
-  }
-
-  .passkey-icon-large {
-    font-size: 48px;
-    margin-bottom: 20px;
-  }
-
-  .passkey-benefits {
-    padding: 20px 16px;
-  }
-
-  .passkey-registration-actions {
-    gap: 12px;
-  }
-
-  .passkey-button {
-    padding: 14px 20px;
-    font-size: 15px;
-  }
-
-  .passkey-registration-content p {
-    font-size: 15px;
-  }
-
-  .passkey-benefits li {
-    font-size: 15px;
-  }
-}
-
-/* Animations */
-@keyframes pulse {
-  0% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-@keyframes fingerprint-pulse {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-.passkey-icon {
-  animation: fingerprint-pulse 2s ease-in-out infinite;
 }
 
 /* Passkey Setup Options Styling */
@@ -334,7 +320,7 @@
     border-bottom: none;
   }
   
-  .passkey-option-icon {
+  &-icon {
     font-size: 24px;
     margin-top: 2px;
     flex-shrink: 0;
@@ -388,4 +374,22 @@
       line-height: 1.4;
     }
   }
+}
+
+.passkey-icon {
+  animation: fingerprint-pulse 2s ease-in-out infinite;
+  margin-bottom: 0;
+}
+
+/* Animations */
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+@keyframes fingerprint-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 }

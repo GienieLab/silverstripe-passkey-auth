@@ -1,0 +1,25 @@
+---
+Name: gienielab-passkey-subsites-integration
+After: 
+  - '#subsites'
+Only:
+  classexists: 'SilverStripe\Subsites\Model\Subsite'
+---
+
+# Subsite Integration Configuration
+SilverStripe\Subsites\Model\Subsite:
+  extensions:
+    - GienieLab\PasskeyAuth\Extensions\SubsitePasskeyExtension
+
+# Passkey Credentials Subsite Support
+GienieLab\PasskeyAuth\Model\PasskeyCredential:
+  extensions:
+    - GienieLab\PasskeyAuth\Extensions\PasskeyCredentialSubsiteExtension
+
+# Admin Interface Configuration
+GienieLab\PasskeyAuth\Admin\PasskeyCredentialAdmin:
+  subsite_aware: true
+  
+# Management Controller Subsite Awareness
+GienieLab\PasskeyAuth\Controller\PasskeyManagementController:
+  subsite_isolation: true

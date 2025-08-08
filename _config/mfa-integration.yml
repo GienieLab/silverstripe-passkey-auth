@@ -1,0 +1,21 @@
+---
+Name: gienielab-passkey-mfa-integration
+After: 
+  - '#silverstripe-mfa'
+Only:
+  classexists: 'SilverStripe\MFA\Service\RegisteredMethodManager'
+---
+
+# MFA Integration Configuration
+SilverStripe\MFA\Service\RegisteredMethodManager:
+  methods:
+    passkey: 'GienieLab\PasskeyAuth\MFA\PasskeyMFAMethod'
+
+# Register as backup method (optional)
+GienieLab\PasskeyAuth\MFA\PasskeyMFAMethod:
+  is_backup_method: false
+  priority: 100
+  
+# Optional: Configure as primary method
+SilverStripe\MFA\State\BackupMethod:
+  allow_passkey_backup: true
