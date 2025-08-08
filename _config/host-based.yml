@@ -1,0 +1,35 @@
+---
+Name: passkey-host-based-integration
+After:
+  - 'passkey-auth'
+---
+
+# Host-based dynamic configuration using SS_ALLOWED_HOSTS
+# This approach is simpler and more reliable than subsite-specific configuration
+GienieLab\PasskeyAuth\Service\PasskeyService:
+  extensions:
+    - GienieLab\PasskeyAuth\Extension\PasskeyHostExtension
+  # Optional: Set global fallback RP name
+  rp_name: 'My Application'
+  # Optional: Set domain-specific names
+  domain_names:
+    'example.com': 'Main Site'
+    'www.example.com': 'Main Site'
+    'shop.example.com': 'Online Store'
+    'api.example.com': 'API Gateway'
+    'admin.example.com': 'Admin Portal'
+
+# If subsites module is available, still support credential isolation
+---
+Name: passkey-host-with-subsites
+Only:
+  classexists: 'SilverStripe\Subsites\Model\Subsite'
+After:
+  - 'passkey-host-based-integration'
+  - 'subsites'
+---
+
+# Add subsite support to PasskeyCredential for isolation
+GienieLab\PasskeyAuth\Model\PasskeyCredential:
+  extensions:
+    - GienieLab\PasskeyAuth\Extension\PasskeyCredentialSubsiteExtension

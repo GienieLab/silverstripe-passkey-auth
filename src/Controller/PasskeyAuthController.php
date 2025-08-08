@@ -292,20 +292,20 @@ class PasskeyAuthController extends Controller
      */
     protected function getCustomBackURL(HTTPRequest $request)
     {
-        
+
         $referer = $request->getHeader('Referer');
         if ($referer) {
             $parsedUrl = parse_url($referer);
             if (isset($parsedUrl['query'])) {
                 parse_str($parsedUrl['query'], $queryParams);
-                $backURL = $queryParams['BackURL'] ?? null;
-                if ($backURL) {
-                    return $backURL;
+                $refererBackURL = $queryParams['BackURL'] ?? null;
+                if ($refererBackURL) {
+                    return $refererBackURL;
                 }
             }
         }
-       
         
+        // 4. Use SilverStripe's standard method
         return RequestHandler::getBackURL();
     }
     

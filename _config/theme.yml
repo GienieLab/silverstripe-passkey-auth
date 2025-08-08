@@ -1,0 +1,44 @@
+---
+Name: passkey-theme-config
+---
+GienieLab\PasskeyAuth\Service\PasskeyService:
+  # Theme Configuration - Override these in your project's config
+  theme:
+    # Primary brand colors
+    primary_color: '#667eea'
+    primary_hover: '#5a6fd8'
+    secondary_color: '#764ba2'
+    
+    # UI colors
+    background_color: '#ffffff'
+    card_background: '#ffffff'
+    text_color: '#2d3748'
+    text_muted: '#718096'
+    border_color: '#e2e8f0'
+    
+    # Status colors
+    success_color: '#48bb78'
+    error_color: '#f56565'
+    warning_color: '#ed8936'
+    info_color: '#4299e1'
+    
+    # Interactive elements
+    button_radius: '8px'
+    card_radius: '12px'
+    shadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+    shadow_hover: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+    
+    # Spacing
+    spacing_xs: '0.25rem'
+    spacing_sm: '0.5rem'
+    spacing_md: '1rem'
+    spacing_lg: '1.5rem'
+    spacing_xl: '2rem'
+    
+    # Typography
+    font_family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+    font_size_sm: '0.875rem'
+    font_size_base: '1rem'
+    font_size_lg: '1.125rem'
+    font_size_xl: '1.25rem'
+    font_size_2xl: '1.5rem'

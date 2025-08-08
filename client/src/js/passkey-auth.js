@@ -1,57 +1,35 @@
-/**
- * Passkey Authentication Module
- * Modern ES6+ implementation for WebAuthn passkey authentication
- */
-
-// Utility functions for base64 conversion
-export const base64Utils = {
-  /**
-   * Convert base64 string to Uint8Array
-   * @param {string} base64String - Base64 encoded string
-   * @returns {Uint8Array} - Decoded byte array
-   */
-  toUint8Array(base64String) {
+// Helper function to convert base64 to Uint8Array
+function base64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding)
-      .replace(/-/g, '+')
-      .replace(/_/g, '/');
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
     
     const rawData = window.atob(base64);
     const outputArray = new Uint8Array(rawData.length);
     
-    for (let i = 0; i < rawData.length; i += 1) {
-      outputArray[i] = rawData.charCodeAt(i);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
     }
     return outputArray;
-  },
+}
 
-  /**
-   * Convert Uint8Array to base64 string
-   * @param {Uint8Array} uint8Array - Byte array to encode
-   * @returns {string} - Base64 encoded string
-   */
-  fromUint8Array(uint8Array) {
+// Helper function to convert Uint8Array to base64
+function uint8ArrayToBase64(uint8Array) {
     let binary = '';
-    for (let i = 0; i < uint8Array.byteLength; i += 1) {
-      binary += String.fromCharCode(uint8Array[i]);
+    for (let i = 0; i < uint8Array.byteLength; i++) {
+        binary += String.fromCharCode(uint8Array[i]);
     }
     return window.btoa(binary);
-  }
-};
+}
 
-/**
- * Check if HTTPS is available (required for WebAuthn)
- * @returns {boolean} - True if HTTPS or localhost
- */
-export function checkHttpsRequirement() {
-  // Allow localhost, 127.0.0.1, and common development domains for testing
-  const isLocalhost = location.hostname === 'localhost' 
-                   || location.hostname === '127.0.0.1' 
+// Helper function to check if HTTPS is available
+function checkHttpsRequirement() {
+    // Allow localhost, 127.0.0.1, and development domains for testing
+    const isLocalhost = location.hostname === 'localhost' || 
+                       location.hostname === '127.0.0.1' || 
                        location.hostname.endsWith('.local') ||
-                       location.hostname.endsWith('.test') ||
-                       location.hostname.endsWith('.dev') ||
-                       location.hostname.includes('localhost') ||
-                       location.hostname.startsWith('dev.');
+                       location.hostname === 'dev.gienie';
     
     if (!isLocalhost && location.protocol !== 'https:') {
         throw new Error('Passkeys require HTTPS. Please use a secure connection.');
@@ -61,8 +39,18 @@ export function checkHttpsRequirement() {
 async function startPasskeyLogin() {
     const statusEl = document.getElementById('passkey-status');
     const passkeyDataField = document.querySelector('input[name="PasskeyData"]');
+    const ctaButton = document.querySelector('.passkey-cta');
+    const ctaContent = document.querySelector('.passkey-cta__content');
+    const ctaLoading = document.querySelector('.passkey-cta__loading');
     
     try {
+        // Update button state to loading
+        if (ctaButton) {
+            ctaButton.disabled = true;
+            if (ctaContent) ctaContent.style.display = 'none';
+            if (ctaLoading) ctaLoading.style.display = 'flex';
+        }
+        
         if (statusEl) {
             statusEl.textContent = 'Preparing authentication...';
             statusEl.className = 'passkey-login__status passkey-login__status--loading';
@@ -112,9 +100,9 @@ async function startPasskeyLogin() {
         // Start WebAuthn authentication
         const credential = await navigator.credentials.get({
             publicKey: {
-                challenge: base64Utils.toUint8Array(challengeData.challenge),
+                challenge: base64ToUint8Array(challengeData.challenge),
                 allowCredentials: challengeData.allowCredentials.map(cred => ({
-                    id: base64Utils.toUint8Array(cred.id),
+                    id: base64ToUint8Array(cred.id),
                     type: cred.type
                 })),
                 userVerification: 'preferred',
@@ -129,86 +117,60 @@ async function startPasskeyLogin() {
         // Prepare the authentication data
         const authData = {
             id: credential.id,
-            rawId: base64Utils.fromUint8Array(new Uint8Array(credential.rawId)),
+            rawId: Array.from(new Uint8Array(credential.rawId)),
             response: {
-                authenticatorData: base64Utils.fromUint8Array(new Uint8Array(credential.response.authenticatorData)),
-                clientDataJSON: base64Utils.fromUint8Array(new Uint8Array(credential.response.clientDataJSON)),
-                signature: base64Utils.fromUint8Array(new Uint8Array(credential.response.signature)),
-                userHandle: credential.response.userHandle ? base64Utils.fromUint8Array(new Uint8Array(credential.response.userHandle)) : null
+                authenticatorData: Array.from(new Uint8Array(credential.response.authenticatorData)),
+                clientDataJSON: Array.from(new Uint8Array(credential.response.clientDataJSON)),
+                signature: Array.from(new Uint8Array(credential.response.signature)),
+                userHandle: credential.response.userHandle ? Array.from(new Uint8Array(credential.response.userHandle)) : null
             },
             type: credential.type
         };
         
-        // Set the passkey data and submit the form
-        if (passkeyDataField) {
-            passkeyDataField.value = JSON.stringify(authData);
-        }
-        
+        // Send authentication data to our login endpoint
         if (statusEl) {
-            statusEl.textContent = 'Verifying authentication...';
-        }
-        
-        // Send authentication data to server
-        const finishResponse = await fetch('/passkey-auth/login-finish', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            credentials: 'same-origin',
-            body: JSON.stringify(authData)
-        });
-        
-        if (!finishResponse.ok) {
-            const errorData = await finishResponse.json();
-            throw new Error(errorData.error || 'Authentication verification failed');
-        }
-        
-        const result = await finishResponse.json();
-        
-        if (statusEl) {
-            statusEl.textContent = 'Authentication successful! Redirecting...';
+            statusEl.textContent = 'Authentication successful! Signing you in...';
             statusEl.className = 'passkey-login__status passkey-login__status--success';
         }
         
-        // Redirect to the specified URL or reload the page
-        if (result.redirectURL) {
-            window.location.href = result.redirectURL;
-        } else {
-            window.location.reload();
-        }
+        // Send to our login-finish endpoint
+        const loginResponse = await fetch('/passkey-auth/login-finish', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(authData)
+        });
         
-        // // Submit the form
-        // const form = document.querySelector('form');
-        // if (form) {
-        //     form.submit();
-        // }
+        const loginResult = await loginResponse.json();
+        
+        if (loginResult.success && loginResult.redirectURL) {
+            // Redirect to the specified URL
+            window.location.href = loginResult.redirectURL;
+        } else if (loginResult.success) {
+            // Fallback: reload the page if no redirect URL provided
+            window.location.reload();
+        } else {
+            throw new Error(loginResult.error || 'Login failed');
+        }
         
     } catch (error) {
         console.error('Passkey authentication failed:', error);
         
-        let userFriendlyMessage = 'Authentication failed: ';
+        // Reset button state
+        const ctaButton = document.querySelector('.passkey-cta');
+        const ctaContent = document.querySelector('.passkey-cta__content');
+        const ctaLoading = document.querySelector('.passkey-cta__loading');
         
-        // Handle specific WebAuthn errors with user-friendly messages
-        if (error.name === 'NotAllowedError') {
-            userFriendlyMessage += 'You cancelled the authentication or the operation timed out. Please try again.';
-        } else if (error.name === 'AbortError') {
-            userFriendlyMessage += 'Authentication was cancelled. Please try again.';
-        } else if (error.name === 'TimeoutError') {
-            userFriendlyMessage += 'Authentication timed out. Please try again.';
-        } else if (error.name === 'SecurityError') {
-            userFriendlyMessage += 'Security error. Please make sure you\'re using a secure connection.';
-        } else if (error.name === 'NotSupportedError') {
-            userFriendlyMessage += 'Your device or browser doesn\'t support this type of authentication.';
-        } else if (error.message.includes('operation is insecure')) {
-            userFriendlyMessage += 'Authentication is not available on this connection. Please use HTTPS.';
-        } else if (error.message.includes('timed out') || error.message.includes('not allowed')) {
-            userFriendlyMessage += 'You cancelled the authentication or it timed out. Please try again.';
-        } else {
-            userFriendlyMessage += error.message;
+        if (ctaButton) {
+            ctaButton.disabled = false;
+            if (ctaContent) ctaContent.style.display = 'flex';
+            if (ctaLoading) ctaLoading.style.display = 'none';
         }
         
         if (statusEl) {
-            statusEl.textContent = userFriendlyMessage;
+            statusEl.textContent = 'Authentication failed: ' + error.message;
             statusEl.className = 'passkey-login__status passkey-login__status--error';
         }
     }
@@ -241,7 +203,6 @@ function showPasskeyRegistrationOption() {
 
 async function startPasskeyRegistration() {
     const statusEl = document.getElementById('passkey-status');
-    let publicKeyOptions = null; // Define in broader scope for error handling
     
     try {
         if (statusEl) {
@@ -249,39 +210,12 @@ async function startPasskeyRegistration() {
             statusEl.className = 'passkey-login__status passkey-login__status--loading';
         }
         
-        // Check HTTPS requirement with detailed logging
-        console.log('=== HTTPS and WebAuthn Support Check ===');
-        console.log('Current URL:', window.location.href);
-        console.log('Protocol:', window.location.protocol);
-        console.log('Hostname:', window.location.hostname);
-        console.log('Is HTTPS:', window.location.protocol === 'https:');
-        console.log('Is localhost/dev domain:', 
-            window.location.hostname === 'localhost' || 
-            window.location.hostname === '127.0.0.1' || 
-            window.location.hostname.endsWith('.local') ||
-            window.location.hostname.endsWith('.test') ||
-            window.location.hostname.endsWith('.dev') ||
-            window.location.hostname.includes('localhost')
-        );
-        
+        // Check HTTPS requirement
         checkHttpsRequirement();
         
-        // Check if WebAuthn is supported with detailed info
-        console.log('WebAuthn Support Check:');
-        console.log('- window.PublicKeyCredential exists:', !!window.PublicKeyCredential);
-        console.log('- navigator.credentials exists:', !!navigator.credentials);
-        console.log('- navigator.credentials.create exists:', !!navigator.credentials.create);
-        
+        // Check if WebAuthn is supported
         if (!window.PublicKeyCredential) {
             throw new Error('WebAuthn is not supported in this browser');
-        }
-        
-        // Additional WebAuthn availability check
-        try {
-            const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-            console.log('Platform authenticator available:', available);
-        } catch (e) {
-            console.log('Could not check platform authenticator availability:', e);
         }
         
         // Request registration challenge from server
@@ -302,7 +236,7 @@ async function startPasskeyRegistration() {
         
         // Start WebAuthn registration
         // The registrationData contains a publicKey object with the actual WebAuthn parameters
-        publicKeyOptions = registrationData.publicKey || registrationData;
+        const publicKeyOptions = registrationData.publicKey || registrationData;
         
         // Debug log the registration data structure
         console.log('Registration data received:', registrationData);
@@ -315,91 +249,64 @@ async function startPasskeyRegistration() {
             statusEl.textContent = 'Touch your authenticator to register...';
         }
         
-        // Add detailed logging before WebAuthn create call
-        console.log('=== About to call navigator.credentials.create ===');
-        console.log('RP info:', publicKeyOptions.rp);
-        console.log('Current origin:', window.location.origin);
-        console.log('Does RP ID match current domain?', 
-            publicKeyOptions.rp.id === window.location.hostname ||
-            window.location.hostname.includes(publicKeyOptions.rp.id)
-        );
+        const credential = await navigator.credentials.create({
+            publicKey: {
+                challenge: base64ToUint8Array(publicKeyOptions.challenge),
+                rp: publicKeyOptions.rp,
+                user: {
+                    id: base64ToUint8Array(publicKeyOptions.user.id),
+                    name: publicKeyOptions.user.name,
+                    displayName: publicKeyOptions.user.displayName
+                },
+                pubKeyCredParams: publicKeyOptions.pubKeyCredParams,
+                authenticatorSelection: publicKeyOptions.authenticatorSelection,
+                timeout: publicKeyOptions.timeout,
+                excludeCredentials: publicKeyOptions.excludeCredentials?.map(cred => ({
+                    id: base64ToUint8Array(cred.id),
+                    type: cred.type
+                })) || []
+            }
+        });
         
-        const webAuthnOptions = {
-            challenge: base64Utils.toUint8Array(publicKeyOptions.challenge),
-            rp: publicKeyOptions.rp,
-            user: {
-                id: base64Utils.toUint8Array(publicKeyOptions.user.id),
-                name: publicKeyOptions.user.name,
-                displayName: publicKeyOptions.user.displayName
+        if (!credential) {
+            throw new Error('Registration was cancelled');
+        }
+        
+        // Prepare the registration data
+        const regData = {
+            id: credential.id,
+            rawId: Array.from(new Uint8Array(credential.rawId)),
+            response: {
+                attestationObject: Array.from(new Uint8Array(credential.response.attestationObject)),
+                clientDataJSON: Array.from(new Uint8Array(credential.response.clientDataJSON))
             },
-            pubKeyCredParams: publicKeyOptions.pubKeyCredParams,
-            authenticatorSelection: publicKeyOptions.authenticatorSelection,
-            timeout: publicKeyOptions.timeout,
-            excludeCredentials: publicKeyOptions.excludeCredentials?.map(cred => ({
-                id: base64Utils.toUint8Array(cred.id),
-                type: cred.type
-            })) || []
+            type: credential.type
         };
         
-        console.log('Final WebAuthn options:', webAuthnOptions);
+        // Send registration data to server
+        const finishResponse = await fetch('/passkey-auth/register-finish', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(regData)
+        });
         
-        try {
-            console.log('Calling navigator.credentials.create...');
-            const credential = await navigator.credentials.create({
-                publicKey: webAuthnOptions
-            });
-            console.log('WebAuthn create successful!', credential);
-            
-            if (!credential) {
-                throw new Error('Registration was cancelled');
-            }
-            
-            // Prepare the registration data
-            const regData = {
-                id: credential.id,
-                rawId: base64Utils.fromUint8Array(new Uint8Array(credential.rawId)),
-                response: {
-                    attestationObject: base64Utils.fromUint8Array(new Uint8Array(credential.response.attestationObject)),
-                    clientDataJSON: base64Utils.fromUint8Array(new Uint8Array(credential.response.clientDataJSON))
-                },
-                type: credential.type
-            };
-            
-            // Send registration data to server
-            const finishResponse = await fetch('/passkey-auth/register-finish', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify(regData)
-            });
-            
-            if (!finishResponse.ok) {
-                const errorData = await finishResponse.json();
-                throw new Error(errorData.error || 'Failed to complete registration');
-            }
-            
-            if (statusEl) {
-                statusEl.textContent = 'Passkey registered successfully! You can now use it to sign in.';
-                statusEl.className = 'passkey-login__status passkey-login__status--success';
-            }
-            
-            // Optionally redirect or refresh the form
-            setTimeout(() => {
-                window.location.reload();
-            }, 2000);
-            
-        } catch (createError) {
-            console.error('=== WebAuthn Create Error ===');
-            console.error('Error name:', createError.name);
-            console.error('Error message:', createError.message);
-            console.error('Error stack:', createError.stack);
-            console.error('Current origin:', window.location.origin);
-            console.error('RP ID from server:', publicKeyOptions.rp?.id);
-            console.error('RP name from server:', publicKeyOptions.rp?.name);
-            throw createError;
+        if (!finishResponse.ok) {
+            const errorData = await finishResponse.json();
+            throw new Error(errorData.error || 'Failed to complete registration');
         }
+        
+        if (statusEl) {
+            statusEl.textContent = 'Passkey registered successfully! You can now use it to sign in.';
+            statusEl.className = 'passkey-login__status passkey-login__status--success';
+        }
+        
+        // Optionally redirect or refresh the form
+        setTimeout(() => {
+            window.location.reload();
+        }, 2000);
         
     } catch (error) {
         console.error('Passkey registration failed:', error);
@@ -409,33 +316,13 @@ async function startPasskeyRegistration() {
         console.error('Current origin:', window.location.origin);
         console.error('RP info from server:', publicKeyOptions?.rp);
         
-        let userFriendlyMessage = 'Registration failed: ';
-        
-        // Handle specific WebAuthn errors with user-friendly messages
+        let errorMessage = 'Registration failed: ' + error.message;
         if (error.name === 'NotAllowedError') {
-            userFriendlyMessage += 'You cancelled the registration or the operation timed out. Please try again.';
-        } else if (error.name === 'AbortError') {
-            userFriendlyMessage += 'Registration was cancelled. Please try again.';
-        } else if (error.name === 'TimeoutError') {
-            userFriendlyMessage += 'Registration timed out. Please try again.';
-        } else if (error.name === 'SecurityError') {
-            userFriendlyMessage += 'Security error. Please make sure you\'re using a secure connection.';
-        } else if (error.name === 'NotSupportedError') {
-            userFriendlyMessage += 'Your device or browser doesn\'t support passkey registration.';
-        } else if (error.name === 'InvalidStateError') {
-            userFriendlyMessage += 'A passkey for this account already exists on this device.';
-        } else if (error.message.includes('operation is insecure')) {
-            userFriendlyMessage += 'Registration is not available on this connection. Please use HTTPS.';
-        } else if (error.message.includes('timed out') || error.message.includes('not allowed')) {
-            userFriendlyMessage += 'You cancelled the registration or it timed out. Please try again.';
-        } else if (error.message.includes('domain/origin')) {
-            userFriendlyMessage += 'Domain configuration error. Please contact support.';
-        } else {
-            userFriendlyMessage += error.message;
+            errorMessage += ' (This usually means the domain/origin doesn\'t match the server configuration)';
         }
         
         if (statusEl) {
-            statusEl.textContent = userFriendlyMessage;
+            statusEl.textContent = errorMessage;
             statusEl.className = 'passkey-login__status passkey-login__status--error';
         }
     }
@@ -595,41 +482,12 @@ function showPasskeyRegistrationModal(email) {
             <div class="passkey-modal-content">
                 <p>Welcome! You've successfully logged in with your password.</p>
                 <p><strong>Would you like to set up a passkey for faster, more secure sign-ins?</strong></p>
-                
-                <div class="passkey-setup-options">
-                    <h3>Setup Options:</h3>
-                    <div class="passkey-option">
-                        <span class="passkey-option-icon">📱</span>
-                        <div>
-                            <strong>This Device</strong>
-                            <p>Use fingerprint, face recognition, or PIN on this device</p>
-                        </div>
-                    </div>
-                    <div class="passkey-option">
-                        <span class="passkey-option-icon">🔑</span>
-                        <div>
-                            <strong>Security Key</strong>
-                            <p>Use a physical security key (USB/NFC)</p>
-                        </div>
-                    </div>
-                    <div class="passkey-option">
-                        <span class="passkey-option-icon">�</span>
-                        <div>
-                            <strong>Cross-Device</strong>
-                            <p>Some browsers may show a QR code to set up on another device</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="passkey-info">
-                    <p><strong>Note:</strong> The exact setup process depends on your browser and device. You might see:</p>
-                    <ul>
-                        <li>A QR code to scan with your phone</li>
-                        <li>A prompt to use your device's built-in authentication</li>
-                        <li>An option to use a security key</li>
-                    </ul>
-                </div>
-                
+                <p>With a passkey, you can sign in using:</p>
+                <ul>
+                    <li>🔒 Your fingerprint</li>
+                    <li>👤 Face recognition</li>
+                    <li>🔑 Security key</li>
+                </ul>
                 <p class="passkey-modal-email">Setting up passkey for: <strong>${email}</strong></p>
             </div>
             <div class="passkey-modal-actions">
@@ -734,10 +592,10 @@ async function startModalPasskeyRegistration() {
         // Prepare the registration data
         const regData = {
             id: credential.id,
-            rawId: base64Utils.fromUint8Array(new Uint8Array(credential.rawId)),
+            rawId: Array.from(new Uint8Array(credential.rawId)),
             response: {
-                attestationObject: base64Utils.fromUint8Array(new Uint8Array(credential.response.attestationObject)),
-                clientDataJSON: base64Utils.fromUint8Array(new Uint8Array(credential.response.clientDataJSON))
+                attestationObject: Array.from(new Uint8Array(credential.response.attestationObject)),
+                clientDataJSON: Array.from(new Uint8Array(credential.response.clientDataJSON))
             },
             type: credential.type
         };
@@ -805,7 +663,3 @@ function addPasskeyRegistrationToProfile() {
 window.startPasskeyLogin = startPasskeyLogin;
 window.startPasskeyRegistration = startPasskeyRegistration;
 window.switchToPasswordMethod = switchToPasswordMethod;
-
-// Legacy function names for backward compatibility
-window.base64ToUint8Array = base64Utils.toUint8Array;
-window.uint8ArrayToBase64 = base64Utils.fromUint8Array;

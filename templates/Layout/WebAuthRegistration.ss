@@ -35,7 +35,7 @@
             </div>
 
             <div class="passkey-registration-actions">
-                <button type="button" class="passkey-button passkey-button--primary" onclick="startPasskeyRegistration()">
+                <button type="button" class="passkey-cta" onclick="startPasskeyRegistration()">
                     <span class="passkey-icon">🔐</span>
                     Set Up Passkey Now
                 </button>

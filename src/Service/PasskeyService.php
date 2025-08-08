@@ -4,6 +4,7 @@ namespace GienieLab\PasskeyAuth\Service;
 
 use SilverStripe\Core\Injector\Injectable;
 use SilverStripe\Core\Config\Configurable;
+use SilverStripe\Core\Extensible;
 use SilverStripe\Security\Member;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Control\Director;
@@ -37,7 +38,7 @@ use Symfony\Component\Uid\Uuid;
 
 class PasskeyService
 {
-    use Injectable, Configurable;
+    use Injectable, Configurable, Extensible;
 
     /**
      * @var PublicKeyCredentialRpEntity
@@ -139,24 +140,87 @@ class PasskeyService
 
     /**
      * Get the RP Entity, creating it if needed
+     * Supports dynamic subsite configuration when subsites module is available
      */
     protected function getRpEntity()
     {
         if (!$this->rpEntity) {
-            $rpName = $this->config()->get('rp_name');
-            $rpId = $this->config()->get('rp_id');
-            
-            // Use configured RP ID or fall back to current domain
-            if (!$rpId) {
-                $rpId = $this->getCurrentDomain();
-            }
-        
+            // Try to get dynamic subsite-specific values first
+            $rpName = $this->getDynamicRpName();
+            $rpId = $this->getDynamicRpId();
             
             // Create RP Entity
             $this->rpEntity = new PublicKeyCredentialRpEntity($rpName, $rpId);
         }
         
         return $this->rpEntity;
+    }
+
+    /**
+     * Get RP Name dynamically, supporting host-based and subsite configuration
+     */
+    protected function getDynamicRpName(): string
+    {
+        // Check if host-based extension is available (preferred)
+        if ($this->hasExtension('PasskeyHostExtension')) {
+            return $this->getHostBasedRpName();
+        }
+        
+        // Check if subsites extension is available (legacy)
+        if ($this->hasExtension('SubsitePasskeyExtension')) {
+            return $this->getSubsiteRpName();
+        }
+        
+        // Fall back to config
+        $rpName = $this->config()->get('rp_name');
+        return $rpName ?: 'SilverStripe Site';
+    }
+
+    /**
+     * Get RP ID dynamically, supporting host-based and subsite configuration
+     */
+    protected function getDynamicRpId(): string
+    {
+        // Check if host-based extension is available (preferred)
+        if ($this->hasExtension('PasskeyHostExtension')) {
+            $dynamicRpId = $this->getHostBasedRpId();
+            if ($dynamicRpId) {
+                return $dynamicRpId;
+            }
+        }
+        
+        // Check if subsites extension is available (legacy)
+        if ($this->hasExtension('SubsitePasskeyExtension')) {
+            $dynamicRpId = $this->getSubsiteRpId();
+            if ($dynamicRpId) {
+                return $dynamicRpId;
+            }
+        }
+        
+        // Fall back to config or current domain
+        $rpId = $this->config()->get('rp_id');
+        if (!$rpId) {
+            $rpId = $this->getCurrentDomain();
+        }
+        
+        return $rpId;
+    }
+
+    /**
+     * Clear the RP entity cache (useful when switching between subsites)
+     */
+    public function clearRpEntityCache(): void
+    {
+        $this->rpEntity = null;
+    }
+
+    /**
+     * Force refresh of RP entity with current subsite context
+     */
+    public function refreshRpEntity(): PublicKeyCredentialRpEntity
+    {
+        $this->clearRpEntityCache();
+        return $this->getRpEntity();
     }
 
     /**
@@ -262,13 +326,26 @@ class PasskeyService
             $challengeData = json_decode($challenge, true);
             $originalChallenge = base64_decode($challengeData['publicKey']['challenge']);
             
-            // Create the collected client data object from the base64url-encoded JSON
-            // Convert standard base64 to base64url (remove padding, replace + with -, replace / with _)
-            $clientDataBase64Url = rtrim(strtr($registrationData['response']['clientDataJSON'], '+/', '-_'), '=');
+            // Handle clientDataJSON - convert from array format to base64url string
+            if (is_array($registrationData['response']['clientDataJSON'])) {
+                // Convert array back to binary data
+                $clientDataBinary = pack('C*', ...$registrationData['response']['clientDataJSON']);
+                // Convert to base64url format (remove padding, replace + with -, replace / with _)
+                $clientDataBase64Url = rtrim(strtr(base64_encode($clientDataBinary), '+/', '-_'), '=');
+            } else {
+                // Already in string format
+                $clientDataBase64Url = rtrim(strtr($registrationData['response']['clientDataJSON'], '+/', '-_'), '=');
+            }
             $collectedClientData = CollectedClientData::createFormJson($clientDataBase64Url);
             
-            // Create the attestation object from the base64-encoded attestation object
-            $attestationObject = $this->attestationObjectLoader->load($registrationData['response']['attestationObject']);
+            // Handle attestationObject - convert from array format to binary if needed
+            if (is_array($registrationData['response']['attestationObject'])) {
+                $attestationObjectBinary = pack('C*', ...$registrationData['response']['attestationObject']);
+                $attestationObjectBase64 = base64_encode($attestationObjectBinary);
+            } else {
+                $attestationObjectBase64 = $registrationData['response']['attestationObject'];
+            }
+            $attestationObject = $this->attestationObjectLoader->load($attestationObjectBase64);
             
             // Create the attestation response from the client data
             $attestationResponse = new AuthenticatorAttestationResponse(
@@ -367,9 +444,12 @@ class PasskeyService
         return [
             'challenge' => base64_encode($requestOptions->challenge),
             'allowCredentials' => array_map(function($cred) {
+                // Convert to base64url format (WebAuthn standard)
+                $base64 = base64_encode($cred->id);
+                $base64url = rtrim(strtr($base64, '+/', '-_'), '=');
                 return [
                     'type' => $cred->type,
-                    'id' => base64_encode($cred->id),
+                    'id' => $base64url,
                 ];
             }, $requestOptions->allowCredentials ?? []),
             'userVerification' => $requestOptions->userVerification,
@@ -386,12 +466,35 @@ class PasskeyService
             // Decode challenge
             $originalChallenge = base64_decode($challenge);
             
-            // Find the credential
-            $credentialId = base64_encode(base64_decode($authenticationData['id']));
-            $credential = PasskeyCredential::get()->filter('CredentialID', $credentialId)->first();
+            // Handle credential ID - convert from base64url (from WebAuthn) to base64 (for database lookup)
+            $credentialIdBase64Url = $authenticationData['id']; // From WebAuthn API (base64url format)
+            
+            // Convert base64url to base64 by adding padding and replacing characters
+            $credentialIdBase64 = str_pad(strtr($credentialIdBase64Url, '-_', '+/'), strlen($credentialIdBase64Url) % 4, '=', STR_PAD_RIGHT);
+            
+            // First try to find by base64url format (in case it was stored that way)
+            $credential = PasskeyCredential::get()->filter('CredentialID', $credentialIdBase64Url)->first();
+            
+            // If not found, try base64 format
+            if (!$credential) {
+                $credential = PasskeyCredential::get()->filter('CredentialID', $credentialIdBase64)->first();
+            }
+            
+            // Debug logging
+            error_log('Authentication Debug - Credential ID (base64url): ' . $credentialIdBase64Url);
+            error_log('Authentication Debug - Credential ID (base64): ' . $credentialIdBase64);
             
             if (!$credential) {
-                throw new \Exception('Credential not found');
+                // Try to decode and re-encode to find the credential
+                $rawCredentialId = base64_decode($credentialIdBase64);
+                $credentialIdAlternative = base64_encode($rawCredentialId);
+                $credential = PasskeyCredential::get()->filter('CredentialID', $credentialIdAlternative)->first();
+                
+                if (!$credential) {
+                    error_log('Authentication Debug - No credential found with any format');
+                    error_log('Authentication Debug - Available credential IDs: ' . implode(', ', PasskeyCredential::get()->column('CredentialID')));
+                    throw new \Exception('Credential not found');
+                }
             }
             
             // Debug logging for credential data
@@ -418,22 +521,49 @@ class PasskeyService
                 $credential->SignCount
             );
             
-            // Create the collected client data object from the base64url-encoded JSON
-            // Convert standard base64 to base64url (remove padding, replace + with -, replace / with _)
-            $clientDataBase64Url = rtrim(strtr($authenticationData['response']['clientDataJSON'], '+/', '-_'), '=');
+            // Handle clientDataJSON - convert from array format to base64url string
+            if (is_array($authenticationData['response']['clientDataJSON'])) {
+                // Convert array back to binary data
+                $clientDataBinary = pack('C*', ...$authenticationData['response']['clientDataJSON']);
+                // Convert to base64url format (remove padding, replace + with -, replace / with _)
+                $clientDataBase64Url = rtrim(strtr(base64_encode($clientDataBinary), '+/', '-_'), '=');
+            } else {
+                // Already in string format
+                $clientDataBase64Url = rtrim(strtr($authenticationData['response']['clientDataJSON'], '+/', '-_'), '=');
+            }
             $collectedClientData = CollectedClientData::createFormJson($clientDataBase64Url);
             
-            // Create the authenticator data object from the raw data
-            $authenticatorDataRaw = base64_decode($authenticationData['response']['authenticatorData']);
+            // Handle authenticatorData - convert from array format to binary
+            if (is_array($authenticationData['response']['authenticatorData'])) {
+                $authenticatorDataRaw = pack('C*', ...$authenticationData['response']['authenticatorData']);
+            } else {
+                $authenticatorDataRaw = base64_decode($authenticationData['response']['authenticatorData']);
+            }
             $authenticatorData = $this->authenticatorDataLoader->load($authenticatorDataRaw);
+            
+            // Handle signature - convert from array format to binary
+            if (is_array($authenticationData['response']['signature'])) {
+                $signature = pack('C*', ...$authenticationData['response']['signature']);
+            } else {
+                $signature = base64_decode($authenticationData['response']['signature']);
+            }
+            
+            // Handle userHandle - convert from array format to binary if present
+            $userHandle = null;
+            if (isset($authenticationData['response']['userHandle']) && $authenticationData['response']['userHandle']) {
+                if (is_array($authenticationData['response']['userHandle'])) {
+                    $userHandle = pack('C*', ...$authenticationData['response']['userHandle']);
+                } else {
+                    $userHandle = base64_decode($authenticationData['response']['userHandle']);
+                }
+            }
             
             // Create assertion response
             $assertionResponse = new AuthenticatorAssertionResponse(
                 $collectedClientData,
                 $authenticatorData,
-                base64_decode($authenticationData['response']['signature']),
-                isset($authenticationData['response']['userHandle']) ? 
-                    base64_decode($authenticationData['response']['userHandle']) : null
+                $signature,
+                $userHandle
             );
             
             // Create request options

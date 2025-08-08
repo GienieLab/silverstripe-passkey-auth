@@ -2,7 +2,16 @@
 Name: gienie-passkey-auth
 ---
 
+SilverStripe\Security\Security:
+  authenticators:
+    passkey: GienieLab\PasskeyAuth\Authenticator\PasskeyAuthenticator
+    PasskeyAuth: '%$GienieLab\PasskeyAuth\Authenticator\PasskeyAuthenticator'
+    MemberAuth: '%$SilverStripe\Security\MemberAuthenticator\MemberAuthenticator'
 
+# Global Theme Service for templates
+SilverStripe\View\SSViewer:
+  global_variables:
+    ThemeService: GienieLab\PasskeyAuth\Service\ThemeServicekey-auth
 
 SilverStripe\Security\Member:
   extensions:
@@ -15,11 +24,6 @@ SilverStripe\Security\Member:
 PageController:
   extensions:
     - GienieLab\PasskeyAuth\Extension\PageControllerExtension
-
-SilverStripe\Security\Security:
-  authenticators:
-    PasskeyAuth: '%$GienieLab\PasskeyAuth\Authenticator\PasskeyAuthenticator'
-    MemberAuth: '%$SilverStripe\Security\MemberAuthenticator\MemberAuthenticator'
 
 ---
 Name: gienie-passkey-auth-injector

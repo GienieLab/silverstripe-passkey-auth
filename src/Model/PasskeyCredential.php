@@ -32,7 +32,6 @@ class PasskeyCredential extends DataObject implements PermissionProvider
     ];
 
     private static $summary_fields = [
-        'CredentialID' => 'Credential ID',
         'Member.Email' => 'User Email',
         'Created' => 'Created',
         'LastUsed' => 'Last Used',

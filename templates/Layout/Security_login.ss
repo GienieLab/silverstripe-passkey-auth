@@ -1,61 +1,57 @@
-<% require javascript('gienielab/silverstripe-passkey-auth:client/dist/js/passkey-auth.js') %>
-<% require css('gienielab/silverstripe-passkey-auth:client/dist/css/styles.css') %>
-<div class="security-page-wrapper">
-    <div class="passkey-login-container">
-        <div class="passkey-login-card">
-            <div class="logo">
-                <!-- Add your logo here if needed -->
-            </div>
-            
-            <h1>Welcome Back</h1>
-            <p class="subtitle">Choose your preferred sign-in method</p>
-            
-            <% if $Message %>
-                <div class="message {$MessageType}">
-                    {$Message}
-                </div>
-            <% end_if %>
+<section id="Login" class="login passkey-auth-wrapper">
+    <!-- Inject CSS Custom Properties for Passkey Theme -->
+    <style>
+        :root {
+            --_login-background-colour: #f6f4f0;
+            --_login-background-colour-contrast: #333;
+            --_login-box-colour: #fff;
+            --_login-box-colour-contrast: #333;
+            --_login-text-colour: #333;
+            --_login-text-colour-contrast: #fff;
+        }
+    </style>
 
-            <div class="login-methods">
-                    <button type="button" class="login-methods__tab active" data-method="password">
-                        Password Login
-                    </button>
-                    <button type="button" class="login-methods__tab" data-method="passkey">
-                        Passkey Login
-                    </button>
+    <div class="login__wrap">
+        <div class="login__body">
+            <div class="login__content">
+                <div class="login__header">
+                    <div class="login__logo">
+                        <!-- Add your logo here if needed -->
+                        <h2>Your Site</h2>
+                    </div>
                 </div>
 
-                <!-- Password Login Method -->
-                <div class="login-method login-method--password active">
-                    $Form
+                <div class="login__heading">
+                    <p>Login to your account</p>
+                    <hr>
                 </div>
 
-                <!-- Passkey Login Method -->
-                <div class="login-method login-method--passkey">
-                    <div class="passkey-icon">🔐</div>
-                    <p class="passkey-description">
-                        Use your fingerprint, face, or security key to sign in securely.
-                    </p>
-                    <button type="button" class="passkey-login__button" onclick="startPasskeyLogin()">
-                        <span class="passkey-login__icon">👆</span>
-                        Sign in with Passkey
-                    </button>
-                    <div class="passkey-login__status" id="passkey-status"></div>
-                </div>
-
-                <!-- Hidden fields -->
-                <% loop $Fields %>
-                    <% if $Name == "PasskeyData" %>
-                        $FieldHolder
+                <div class="login__form">
+                    <% if $Message %>
+                        <div class="message {$MessageType}">
+                            {$Message}
+                        </div>
                     <% end_if %>
-                <% end_loop %>
 
+                    <!-- Enhanced Login method tabs with icons -->
+                    <% include LoginTabs %>
+                    
+                    <!-- Password Login Method -->
+                    <% include PasswordLogin %>  
+                    
+                    <!-- Enhanced Passkey login section using include template -->
+                    <% include PasskeyLogin %>
 
-            <div class="form-actions">
-                <a href="/Security/lostpassword">Forgot your password?</a>
+                    <!-- Hidden fields -->
+                    <% loop $Fields %>
+                        <% if $Name == "PasskeyData" %>
+                            $FieldHolder
+                        <% end_if %>
+                    <% end_loop %>
+                </div>
             </div>
         </div>
     </div>
-</div>
+</section>
 
 
