@@ -28,7 +28,7 @@ class PasskeyCredentialAdmin extends ModelAdmin
 
     private static $menu_title = 'Passkey Credentials';
 
-    private static $menu_icon_class = 'font-icon-key';
+    private static $menu_icon_class = 'font-icon-p-shield';
 
     private static $menu_priority = 3;
 
