@@ -380,11 +380,6 @@ class PasskeyService
             $credential = PasskeyCredential::create();
             $credential->CredentialID = base64_encode($publicKeyCredentialSource->publicKeyCredentialId);
             
-            // Debug: Check public key data
-            error_log('Registration Debug - Public Key type: ' . gettype($publicKeyCredentialSource->credentialPublicKey));
-            error_log('Registration Debug - Public Key length: ' . strlen($publicKeyCredentialSource->credentialPublicKey));
-            error_log('Registration Debug - Public Key (first 50 chars): ' . substr($publicKeyCredentialSource->credentialPublicKey, 0, 50));
-            
             // Store public key as base64 to avoid binary data issues
             $credential->PublicKey = base64_encode($publicKeyCredentialSource->credentialPublicKey);
             $credential->AAGUID = $publicKeyCredentialSource->aaguid ? $publicKeyCredentialSource->aaguid->toString() : '';
@@ -480,9 +475,6 @@ class PasskeyService
                 $credential = PasskeyCredential::get()->filter('CredentialID', $credentialIdBase64)->first();
             }
             
-            // Debug logging
-            error_log('Authentication Debug - Credential ID (base64url): ' . $credentialIdBase64Url);
-            error_log('Authentication Debug - Credential ID (base64): ' . $credentialIdBase64);
             
             if (!$credential) {
                 // Try to decode and re-encode to find the credential
@@ -497,11 +489,6 @@ class PasskeyService
                 }
             }
             
-            // Debug logging for credential data
-            error_log('Authentication Debug - Credential ID: ' . $credential->CredentialID);
-            error_log('Authentication Debug - Public Key length: ' . strlen($credential->PublicKey));
-            error_log('Authentication Debug - AAGUID: ' . $credential->AAGUID);
-            error_log('Authentication Debug - Sign Count: ' . $credential->SignCount);
             
             // Validate public key data
             if (empty($credential->PublicKey)) {

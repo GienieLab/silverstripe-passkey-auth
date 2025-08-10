@@ -169,10 +169,6 @@ class PasskeyAuthController extends Controller
             $registrationData = json_decode($request->getBody(), true);
             $challenge = $request->getSession()->get('passkey_registration_challenge');
             
-            // Debug: Log the received registration data structure
-            error_log('Registration data received: ' . print_r($registrationData, true));
-            error_log('Challenge from session: ' . $challenge);
-            
             if (!$registrationData || !$challenge) {
                 throw new \Exception('Invalid registration data or missing challenge');
             }
