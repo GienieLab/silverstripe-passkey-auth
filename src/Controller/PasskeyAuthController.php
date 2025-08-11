@@ -12,21 +12,30 @@ use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Security\IdentityStore;
 use SilverStripe\Control\RequestHandler;
+use SilverStripe\Security\SecurityToken;
+use SilverStripe\Security\Permission;
+use SilverStripe\Core\Cache\CacheFactory;
+use Psr\Log\LoggerInterface;
 use GienieLab\PasskeyAuth\Service\PasskeyService;
 use GienieLab\PasskeyAuth\Model\PasskeyCredential;
 
 class PasskeyAuthController extends Controller
 {
+    /**
+     * @var LoggerInterface
+     */
+    protected $logger;
+
     private static $allowed_actions = [
-        'registerBegin',
-        'registerFinish',
-        'loginBegin',
-        'loginFinish',
-        'challenge',
-        'clearSessionFlag',
-        'webauth',
-        'debugConfig',
-        'debugDomain'
+        'registerBegin' => '->checkPasskeyCSRF',
+        'registerFinish' => '->checkPasskeyCSRF',
+        'loginBegin' => '->checkPasskeyCSRF',
+        'loginFinish' => '->checkPasskeyCSRF',
+        'challenge' => '->checkPasskeyCSRF',
+        'clearSessionFlag' => true,
+        'webauth' => true,
+        'debugConfig' => '->checkDebugPermission',
+        'debugDomain' => '->checkDebugPermission'
     ];
 
     private static $url_handlers = [
@@ -41,6 +50,198 @@ class PasskeyAuthController extends Controller
         'debug-domain' => 'debugDomain'
     ];
 
+    public function __construct()
+    {
+        parent::__construct();
+        $this->logger = Injector::inst()->get(LoggerInterface::class);
+    }
+
+    /**
+     * Check CSRF token for regular actions
+     */
+    public function checkCSRF(HTTPRequest $request = null): bool
+    {
+        if (!$request) {
+            $request = $this->getRequest();
+        }
+        return SecurityToken::inst()->checkRequest($request);
+    }
+
+    /**
+     * Custom security check for passkey actions
+     * More lenient than CSRF but still secure for passkey flows
+     */
+    public function checkPasskeyCSRF(HTTPRequest $request = null): bool
+    {
+        if (!$request) {
+            $request = $this->getRequest();
+        }
+        
+        // 1. Must be POST request
+        if (!$request->isPost()) {
+            return false;
+        }
+        
+        // 2. Must have proper Content-Type for API calls
+        $contentType = $request->getHeader('Content-Type');
+        if (!$contentType || !str_contains($contentType, 'application/json')) {
+            return false;
+        }
+        
+        // 3. Check for common CSRF attack patterns
+        $referer = $request->getHeader('Referer');
+        $origin = $request->getHeader('Origin');
+        $host = $request->getHeader('Host');
+        
+        // Allow requests from same origin
+        if ($origin) {
+            $originHost = parse_url($origin, PHP_URL_HOST);
+            if ($originHost && $originHost === $host) {
+                return true;
+            }
+        }
+        
+        // Allow requests with valid referer from same domain
+        if ($referer) {
+            $refererHost = parse_url($referer, PHP_URL_HOST);
+            if ($refererHost && $refererHost === $host) {
+                return true;
+            }
+        }
+        
+        // For localhost development, be more lenient
+        if ($this->isLocalhostDomain($host)) {
+            return true;
+        }
+        
+        // If we can't verify origin, fall back to CSRF token check
+        return SecurityToken::inst()->checkRequest($request);
+    }
+
+    /**
+     * Additional security validation for API requests
+     */
+    protected function validateRequestSecurity(HTTPRequest $request): bool
+    {
+        // 1. Check User-Agent (block obvious bots/crawlers)
+        $userAgent = $request->getHeader('User-Agent');
+        if (!$userAgent || $this->isSuspiciousUserAgent($userAgent)) {
+            $this->logger->warning('Blocked suspicious User-Agent', [
+                'user_agent' => $userAgent,
+                'ip' => $request->getIP()
+            ]);
+            return false;
+        }
+        
+        // 2. Check for required headers that legitimate browsers send
+        $requiredHeaders = ['Accept', 'Accept-Language'];
+        foreach ($requiredHeaders as $header) {
+            if (!$request->getHeader($header)) {
+                $this->logger->warning('Missing required header', [
+                    'missing_header' => $header,
+                    'ip' => $request->getIP()
+                ]);
+                return false;
+            }
+        }
+        
+        // 3. Check request body size (passkey requests should be reasonable size)
+        $body = $request->getBody();
+        if (strlen($body) > 10240) { // 10KB limit
+            $this->logger->warning('Request body too large', [
+                'body_size' => strlen($body),
+                'ip' => $request->getIP()
+            ]);
+            return false;
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Check if User-Agent looks suspicious
+     */
+    protected function isSuspiciousUserAgent(string $userAgent): bool
+    {
+        $suspiciousPatterns = [
+            '/curl/i',
+            '/wget/i',
+            '/python/i',
+            '/requests/i',
+            '/postman/i',
+            '/bot/i',
+            '/crawler/i',
+            '/spider/i',
+            '/scraper/i'
+        ];
+        
+        foreach ($suspiciousPatterns as $pattern) {
+            if (preg_match($pattern, $userAgent)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Check debug permission
+     */
+    public function checkDebugPermission(HTTPRequest $request): bool
+    {
+        return Director::isDev() && Permission::check('ADMIN');
+    }
+
+    /**
+     * Check rate limit for actions
+     */
+    protected function checkRateLimit(HTTPRequest $request, string $action, int $limit = 5, int $window = 3600): bool
+    {
+        $cache = Injector::inst()->get(CacheFactory::class)->create('passkey_rate_limit');
+        $key = $action . '_' . $request->getIP();
+        $attempts = $cache->get($key) ?: 0;
+        
+        if ($attempts >= $limit) {
+            return false;
+        }
+        
+        $cache->set($key, $attempts + 1, $window);
+        return true;
+    }
+
+    /**
+     * Add security headers to response
+     */
+    protected function addSecurityHeaders(HTTPResponse $response): void
+    {
+        $response->addHeader('X-Content-Type-Options', 'nosniff');
+        $response->addHeader('X-Frame-Options', 'DENY');
+        $response->addHeader('X-XSS-Protection', '1; mode=block');
+        $response->addHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+        $response->addHeader('Content-Security-Policy', "default-src 'self'");
+    }
+
+    /**
+     * Validate challenge expiry and session binding
+     */
+    protected function validateChallengeSession(HTTPRequest $request, array $challengeData): bool
+    {
+        if (!$challengeData || !isset($challengeData['expires'])) {
+            return false;
+        }
+        
+        if ($challengeData['expires'] < time()) {
+            return false;
+        }
+        
+        if (isset($challengeData['user_agent']) && 
+            $challengeData['user_agent'] !== $request->getHeader('User-Agent')) {
+            return false;
+        }
+        
+        return true;
+    }
+
     /**
      * Generate authentication challenge for passkey login
      * This is called from the JavaScript to initiate authentication
@@ -49,6 +250,16 @@ class PasskeyAuthController extends Controller
     {
         if (!$request->isPost()) {
             return $this->httpError(405, 'Method not allowed');
+        }
+
+        // Additional security: Check for suspicious request patterns
+        if (!$this->validateRequestSecurity($request)) {
+            return $this->httpError(403, 'Forbidden');
+        }
+
+        // Check rate limiting
+        if (!$this->checkRateLimit($request, 'challenge')) {
+            return $this->httpError(429, 'Too many requests');
         }
 
         try {
@@ -80,8 +291,14 @@ class PasskeyAuthController extends Controller
                 $getArgsArray = $getArgs;
             }
             
-            // Store challenge in session for verification
-            $request->getSession()->set('passkey_challenge', $getArgsArray['challenge']);
+            // Store challenge in session for verification with expiry and session binding
+            $challengeData = [
+                'challenge' => $getArgsArray['challenge'],
+                'expires' => time() + 300, // 5 minutes
+                'user_agent' => $request->getHeader('User-Agent'),
+                'ip' => $request->getIP()
+            ];
+            $request->getSession()->set('passkey_challenge_data', $challengeData);
             
             // Preserve BackURL if provided
             $backURL = $this->getCustomBackURL($request);
@@ -90,16 +307,23 @@ class PasskeyAuthController extends Controller
             }
             
             $response = new HTTPResponse();
+            $this->addSecurityHeaders($response);
             $response->addHeader('Content-Type', 'application/json');
             $response->setBody(json_encode($getArgsArray));
             
             return $response;
 
         } catch (\Exception $e) {
+            $this->logger->warning('Challenge generation failed', [
+                'error' => $e->getMessage(),
+                'ip' => $request->getIP()
+            ]);
+            
             $response = new HTTPResponse();
             $response->setStatusCode(500);
+            $this->addSecurityHeaders($response);
             $response->addHeader('Content-Type', 'application/json');
-            $response->setBody(json_encode(['error' => 'Failed to generate challenge: ' . $e->getMessage()]));
+            $response->setBody(json_encode(['error' => 'Failed to generate challenge']));
             
             return $response;
         }
@@ -109,6 +333,11 @@ class PasskeyAuthController extends Controller
     {
         if (!$request->isPost()) {
             return $this->httpError(405, 'Method not allowed');
+        }
+
+        // Check rate limiting
+        if (!$this->checkRateLimit($request, 'register')) {
+            return $this->httpError(429, 'Too many registration attempts');
         }
 
         try {
@@ -126,29 +355,45 @@ class PasskeyAuthController extends Controller
             // Generate registration challenge (returns array)
             $createArgsArray = $passkeyService->generateRegistrationChallenge($member);
             
-            // Debug: Check the structure of the WebAuthn response
+            // Validate the response structure
             if (!isset($createArgsArray['publicKey']['challenge'])) {
-                $availableKeys = isset($createArgsArray['publicKey']) ? 
-                    'publicKey keys: ' . implode(', ', array_keys($createArgsArray['publicKey'])) :
-                    'top-level keys: ' . implode(', ', array_keys($createArgsArray));
-                throw new \Exception('Challenge not found in WebAuthn response. Available: ' . $availableKeys);
+                $this->logger->error('Invalid registration challenge structure', [
+                    'member_id' => $member->ID,
+                    'available_keys' => isset($createArgsArray['publicKey']) ? 
+                        array_keys($createArgsArray['publicKey']) : array_keys($createArgsArray)
+                ]);
+                throw new \Exception('Invalid registration challenge structure');
             }
             
-            // Store the complete createArgs as JSON for verification (required by processRegistration)
-            $request->getSession()->set('passkey_registration_challenge', json_encode($createArgsArray));
-            $request->getSession()->set('passkey_registration_user_id', $member->ID);
+            // Store challenge data with security binding
+            $challengeData = [
+                'challenge' => json_encode($createArgsArray),
+                'user_id' => $member->ID,
+                'expires' => time() + 300, // 5 minutes
+                'user_agent' => $request->getHeader('User-Agent'),
+                'ip' => $request->getIP()
+            ];
+            $request->getSession()->set('passkey_registration_data', $challengeData);
 
             $response = new HTTPResponse();
+            $this->addSecurityHeaders($response);
             $response->addHeader('Content-Type', 'application/json');
             $response->setBody(json_encode($createArgsArray));
             
             return $response;
 
         } catch (\Exception $e) {
+            $this->logger->warning('Registration begin failed', [
+                'member_id' => isset($member) ? $member->ID : 'unknown',
+                'error' => $e->getMessage(),
+                'ip' => $request->getIP()
+            ]);
+            
             $response = new HTTPResponse();
             $response->setStatusCode(500);
+            $this->addSecurityHeaders($response);
             $response->addHeader('Content-Type', 'application/json');
-            $response->setBody(json_encode(['error' => 'Failed to begin registration: ' . $e->getMessage()]));
+            $response->setBody(json_encode(['error' => 'Failed to begin registration']));
             
             return $response;
         }
@@ -160,44 +405,67 @@ class PasskeyAuthController extends Controller
             return $this->httpError(405, 'Method not allowed');
         }
 
+        // Check rate limiting
+        if (!$this->checkRateLimit($request, 'register_finish')) {
+            return $this->httpError(429, 'Too many registration attempts');
+        }
+
         try {
             $member = Security::getCurrentUser();
             if (!$member) {
                 return $this->httpError(401, 'User must be logged in to register passkey');
             }
 
+            // Validate session data
+            $challengeData = $request->getSession()->get('passkey_registration_data');
+            if (!$this->validateChallengeSession($request, $challengeData)) {
+                throw new \Exception('Invalid or expired registration session');
+            }
+
+            if ($challengeData['user_id'] !== $member->ID) {
+                throw new \Exception('Registration session user mismatch');
+            }
+
             $registrationData = json_decode($request->getBody(), true);
-            $challenge = $request->getSession()->get('passkey_registration_challenge');
-            
-            if (!$registrationData || !$challenge) {
-                throw new \Exception('Invalid registration data or missing challenge');
+            if (!$registrationData) {
+                throw new \Exception('Invalid registration data format');
             }
 
             /** @var \GienieLab\PasskeyAuth\Service\PasskeyService $passkeyService */
             $passkeyService = Injector::inst()->get(PasskeyService::class);
 
             // Process registration
-            $credential = $passkeyService->processRegistration($registrationData, $challenge, $member);
+            $credential = $passkeyService->processRegistration(
+                $registrationData, 
+                $challengeData['challenge'], 
+                $member
+            );
             
             // Clear session data
-            $request->getSession()->clear('passkey_registration_challenge');
-            $request->getSession()->clear('passkey_registration_user_id');
+            $request->getSession()->clear('passkey_registration_data');
 
             $response = new HTTPResponse();
+            $this->addSecurityHeaders($response);
             $response->addHeader('Content-Type', 'application/json');
             $response->setBody(json_encode([
                 'success' => true,
-                'message' => 'Passkey registered successfully',
-                'credentialId' => $credential->CredentialID
+                'message' => 'Passkey registered successfully'
             ]));
             
             return $response;
 
         } catch (\Exception $e) {
+            $this->logger->warning('Registration finish failed', [
+                'member_id' => isset($member) ? $member->ID : 'unknown',
+                'error' => $e->getMessage(),
+                'ip' => $request->getIP()
+            ]);
+            
             $response = new HTTPResponse();
             $response->setStatusCode(500);
+            $this->addSecurityHeaders($response);
             $response->addHeader('Content-Type', 'application/json');
-            $response->setBody(json_encode(['error' => 'Registration failed: ' . $e->getMessage()]));
+            $response->setBody(json_encode(['error' => 'Registration failed']));
             
             return $response;
         }
@@ -215,33 +483,42 @@ class PasskeyAuthController extends Controller
             return $this->httpError(405, 'Method not allowed');
         }
 
+        // Check rate limiting
+        if (!$this->checkRateLimit($request, 'login')) {
+            return $this->httpError(429, 'Too many authentication attempts');
+        }
+
         try {
+            // Validate session data
+            $challengeData = $request->getSession()->get('passkey_challenge_data');
+            if (!$this->validateChallengeSession($request, $challengeData)) {
+                throw new \Exception('Invalid or expired authentication session');
+            }
+
             $authenticationData = json_decode($request->getBody(), true);
-            $challenge = $request->getSession()->get('passkey_challenge');
-            
-            if (!$authenticationData || !$challenge) {
-                throw new \Exception('Invalid authentication data or missing challenge');
+            if (!$authenticationData) {
+                throw new \Exception('Invalid authentication data format');
             }
 
             /** @var \GienieLab\PasskeyAuth\Service\PasskeyService $passkeyService */
             $passkeyService = Injector::inst()->get(PasskeyService::class);
             
             // Verify authentication
-            $member = $passkeyService->processAuthentication($authenticationData, $challenge);
+            $member = $passkeyService->processAuthentication(
+                $authenticationData, 
+                $challengeData['challenge']
+            );
             
             if (!$member) {
                 throw new \Exception('Authentication verification failed');
             }
             
             // Log the user in using SilverStripe's Security class
-           // Get the IdentityStore service
             $identityStore = Injector::inst()->get(IdentityStore::class);
-
-            // Log in the member
             $identityStore->logIn($member, true, $request);
             
-            // Clear challenge
-            $request->getSession()->clear('passkey_challenge');
+            // Clear challenge data
+            $request->getSession()->clear('passkey_challenge_data');
 
             // Determine redirect URL with BackURL support
             $backURL = $this->getCustomBackURL($request);
@@ -251,6 +528,7 @@ class PasskeyAuthController extends Controller
             $request->getSession()->clear('BackURL');
 
             $response = new HTTPResponse();
+            $this->addSecurityHeaders($response);
             $response->addHeader('Content-Type', 'application/json');
             $response->setBody(json_encode([
                 'success' => true,
@@ -261,10 +539,16 @@ class PasskeyAuthController extends Controller
             return $response;
 
         } catch (\Exception $e) {
+            $this->logger->warning('Login finish failed', [
+                'error' => $e->getMessage(),
+                'ip' => $request->getIP()
+            ]);
+            
             $response = new HTTPResponse();
             $response->setStatusCode(401);
+            $this->addSecurityHeaders($response);
             $response->addHeader('Content-Type', 'application/json');
-            $response->setBody(json_encode(['error' => 'Authentication failed: ' . $e->getMessage()]));
+            $response->setBody(json_encode(['error' => 'Authentication failed']));
             
             return $response;
         }
@@ -367,10 +651,9 @@ class PasskeyAuthController extends Controller
      */
     public function debugConfig(HTTPRequest $request)
     {
-
-        // Only allow in dev mode for security
-        if (!Director::isDev()) {
-            return $this->httpError(404, 'Not found');
+        // Rate limiting for debug endpoint
+        if (!$this->checkRateLimit($request, 'debug', 3, 300)) {
+            return $this->httpError(429, 'Too many debug requests');
         }
 
         $passkeyService = Injector::inst()->get(PasskeyService::class);
@@ -381,8 +664,6 @@ class PasskeyAuthController extends Controller
                 'is_dev' => Director::isDev(),
                 'is_https' => Director::is_https(),
                 'current_domain' => $request->getHeader('Host'),
-                'server_name' => $_SERVER['SERVER_NAME'] ?? 'unknown',
-                'request_uri' => $_SERVER['REQUEST_URI'] ?? 'unknown',
             ],
             'passkey_config' => [
                 'rp_name' => $passkeyService->config()->get('rp_name'),
@@ -406,7 +687,14 @@ class PasskeyAuthController extends Controller
             $debugInfo['recommendations'][] = 'RP ID (' . $actualRpId . ') does not match current domain (' . $request->getHeader('Host') . '). This will cause "operation is insecure" errors.';
         }
 
+        // Log debug access
+        $this->logger->info('Debug config accessed', [
+            'ip' => $request->getIP(),
+            'user_agent' => $request->getHeader('User-Agent')
+        ]);
+
         $response = HTTPResponse::create(json_encode($debugInfo, JSON_PRETTY_PRINT));
+        $this->addSecurityHeaders($response);
         $response->addHeader('Content-Type', 'application/json');
         return $response;
     }
@@ -429,26 +717,20 @@ class PasskeyAuthController extends Controller
      */
     public function debugDomain(HTTPRequest $request)
     {
-        if (!Director::isDev()) {
-            return $this->httpError(404, 'Not found');
+        // Rate limiting for debug endpoint
+        if (!$this->checkRateLimit($request, 'debug_domain', 3, 300)) {
+            return $this->httpError(429, 'Too many debug requests');
         }
 
         $passkeyService = Injector::inst()->get(PasskeyService::class);
         
+        // Sanitized domain info (remove sensitive server details)
         $domainInfo = [
             'request_headers' => [
                 'Host' => $request->getHeader('Host'),
-                'X-Forwarded-Host' => $request->getHeader('X-Forwarded-Host'),
                 'Origin' => $request->getHeader('Origin'),
-                'Referer' => $request->getHeader('Referer'),
-            ],
-            'server_vars' => [
-                'HTTP_HOST' => $_SERVER['HTTP_HOST'] ?? null,
-                'SERVER_NAME' => $_SERVER['SERVER_NAME'] ?? null,
-                'REQUEST_URI' => $_SERVER['REQUEST_URI'] ?? null,
             ],
             'silverstripe_detection' => [
-                'Director::absoluteBaseURL()' => Director::absoluteBaseURL(),
                 'Director::is_https()' => Director::is_https(),
             ],
             'passkey_service' => [
@@ -457,7 +739,14 @@ class PasskeyAuthController extends Controller
             ]
         ];
 
+        // Log debug access
+        $this->logger->info('Debug domain accessed', [
+            'ip' => $request->getIP(),
+            'user_agent' => $request->getHeader('User-Agent')
+        ]);
+
         $response = HTTPResponse::create(json_encode($domainInfo, JSON_PRETTY_PRINT));
+        $this->addSecurityHeaders($response);
         $response->addHeader('Content-Type', 'application/json');
         return $response;
     }

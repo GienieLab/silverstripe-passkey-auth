@@ -8,6 +8,8 @@ use SilverStripe\Security\Security;
 use SilverStripe\Security\Permission;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\Security\PermissionProvider;
+use SilverStripe\Core\Injector\Injector;
+use Psr\Log\LoggerInterface;
 
 class PasskeyCredential extends DataObject implements PermissionProvider
 {
@@ -21,6 +23,8 @@ class PasskeyCredential extends DataObject implements PermissionProvider
         'Transports' => 'Text',
         'UserAgent' => 'Text',
         'LastUsed' => 'Datetime',
+        'CredentialName' => 'Varchar(255)', // User-friendly name
+        'IsActive' => 'Boolean(1)', // Allow disabling credentials
     ];
 
     private static $has_one = [
@@ -32,9 +36,11 @@ class PasskeyCredential extends DataObject implements PermissionProvider
     ];
 
     private static $summary_fields = [
+        'CredentialName' => 'Credential Name',
         'Member.Email' => 'User Email',
         'Created' => 'Created',
         'LastUsed' => 'Last Used',
+        'IsActive.Nice' => 'Active',
     ];
 
     private static $searchable_fields = [
@@ -56,6 +62,15 @@ class PasskeyCredential extends DataObject implements PermissionProvider
         if ($userAgent !== null) {
             $this->UserAgent = $userAgent;
         }
+        
+        // Log usage update for security monitoring
+        $logger = Injector::inst()->get(LoggerInterface::class);
+        $logger->info('Passkey credential usage updated', [
+            'credential_id' => substr($this->CredentialID, 0, 8) . '...',
+            'member_id' => $this->MemberID,
+            'sign_count' => $this->SignCount,
+        ]);
+        
         $this->write();
     }
 
@@ -64,6 +79,10 @@ class PasskeyCredential extends DataObject implements PermissionProvider
      */
     public function getTitle()
     {
+        if ($this->CredentialName) {
+            return $this->CredentialName;
+        }
+        
         $created = $this->dbObject('Created')->Nice();
         $userAgent = $this->UserAgent ? ' (' . substr($this->UserAgent, 0, 50) . '...)' : '';
         return "Passkey created {$created}{$userAgent}";
@@ -108,6 +127,14 @@ class PasskeyCredential extends DataObject implements PermissionProvider
             $member = Security::getCurrentUser();
         }
         
+        // Log deletion attempts for security monitoring
+        $logger = Injector::inst()->get(LoggerInterface::class);
+        $logger->info('Passkey credential deletion attempted', [
+            'credential_id' => substr($this->CredentialID, 0, 8) . '...',
+            'owner_id' => $this->MemberID,
+            'requester_id' => $member ? $member->ID : 'unknown',
+        ]);
+        
         return $member && (
             $member->ID === $this->MemberID || 
             Permission::checkMember($member, 'ADMIN')
@@ -124,6 +151,36 @@ class PasskeyCredential extends DataObject implements PermissionProvider
         }
         
         return $member && Permission::checkMember($member, 'ADMIN');
+    }
+
+    /**
+     * Disable a credential instead of deleting it
+     */
+    public function disable()
+    {
+        $this->IsActive = false;
+        $this->write();
+        
+        $logger = Injector::inst()->get(LoggerInterface::class);
+        $logger->info('Passkey credential disabled', [
+            'credential_id' => substr($this->CredentialID, 0, 8) . '...',
+            'member_id' => $this->MemberID,
+        ]);
+    }
+
+    /**
+     * Enable a credential
+     */
+    public function enable()
+    {
+        $this->IsActive = true;
+        $this->write();
+        
+        $logger = Injector::inst()->get(LoggerInterface::class);
+        $logger->info('Passkey credential enabled', [
+            'credential_id' => substr($this->CredentialID, 0, 8) . '...',
+            'member_id' => $this->MemberID,
+        ]);
     }
 
     /**

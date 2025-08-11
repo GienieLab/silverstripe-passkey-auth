@@ -1,0 +1,28 @@
+---
+Name: passkey-security
+---
+
+# Security headers and CSP configuration
+SilverStripe\Control\Director:
+  rules:
+    'passkey-auth': 'GienieLab\PasskeyAuth\Controller\PasskeyAuthController'
+
+# Rate limiting cache configuration
+SilverStripe\Core\Cache\CacheFactory:
+  passkey_rate_limit:
+    namespace: "passkey_rate_limit"
+    defaultLifetime: 3600
+
+# Security token configuration
+SilverStripe\Security\SecurityToken:
+  default_token: "SecurityID"
+
+# Session security
+SilverStripe\Control\Session:
+  cookie_secure: true
+  cookie_httponly: true
+  cookie_samesite: 'Strict'
+
+# Content Security Policy for passkey operations
+SilverStripe\Control\Controller:
+  default_csp: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none';"

@@ -8,6 +8,8 @@ use SilverStripe\Core\Extensible;
 use SilverStripe\Security\Member;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Control\Director;
+use SilverStripe\Core\Injector\Injector;
+use Psr\Log\LoggerInterface;
 use GienieLab\PasskeyAuth\Model\PasskeyCredential;
 
 // web-auth/webauthn-lib imports
@@ -100,8 +102,16 @@ class PasskeyService
      */
     private static $require_user_presence = true;
 
+    /**
+     * @var LoggerInterface
+     */
+    protected $logger;
+
     public function __construct()
     {
+        // Initialize logger
+        $this->logger = Injector::inst()->get(LoggerInterface::class);
+        
         // Get configuration values
         $rpName = $this->config()->get('rp_name');
         
@@ -224,6 +234,53 @@ class PasskeyService
     }
 
     /**
+     * Validate registration data structure
+     */
+    private function validateRegistrationData($data): bool
+    {
+        if (!is_array($data)) {
+            return false;
+        }
+        
+        $required = ['response', 'id', 'type'];
+        foreach ($required as $field) {
+            if (!isset($data[$field])) {
+                return false;
+            }
+        }
+        
+        if (!is_array($data['response'])) {
+            return false;
+        }
+        
+        $responseRequired = ['clientDataJSON', 'attestationObject'];
+        foreach ($responseRequired as $field) {
+            if (!isset($data['response'][$field])) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    /**
+     * Validate challenge format
+     */
+    private function validateChallenge($challenge): bool
+    {
+        if (empty($challenge)) {
+            return false;
+        }
+        
+        $challengeData = json_decode($challenge, true);
+        if (!$challengeData || !isset($challengeData['publicKey']['challenge'])) {
+            return false;
+        }
+        
+        return true;
+    }
+
+    /**
      * Generate registration challenge for new passkey
      */
     public function generateRegistrationChallenge($member)
@@ -322,6 +379,15 @@ class PasskeyService
     public function processRegistration($registrationData, $challenge, $member)
     {
         try {
+            // Validate input structure
+            if (!$this->validateRegistrationData($registrationData)) {
+                throw new \InvalidArgumentException('Invalid registration data structure');
+            }
+            
+            if (!$this->validateChallenge($challenge)) {
+                throw new \InvalidArgumentException('Invalid challenge format');
+            }
+
             // Decode the stored challenge
             $challengeData = json_decode($challenge, true);
             $originalChallenge = base64_decode($challengeData['publicKey']['challenge']);
@@ -387,11 +453,22 @@ class PasskeyService
             $credential->MemberID = $member->ID;
             $credential->write();
 
+            // Log successful registration
+            $this->logger->info('Successful passkey registration', [
+                'member_id' => $member->ID,
+                'credential_id' => substr($credential->CredentialID, 0, 8) . '...',
+                'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+            ]);
+
             return $credential;
 
         } catch (\Throwable $ex) {
-            error_log('Registration processing error: ' . $ex->getMessage());
-            error_log('Stack trace: ' . $ex->getTraceAsString());
+            // Log failed registration attempt
+            $this->logger->warning('Failed passkey registration attempt', [
+                'member_id' => $member ? $member->ID : 'unknown',
+                'error' => $ex->getMessage(),
+                'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+            ]);
             throw new \Exception('Registration failed: ' . $ex->getMessage());
         }
     }
@@ -453,11 +530,50 @@ class PasskeyService
     }
 
     /**
+     * Validate authentication data structure
+     */
+    private function validateAuthenticationData($data): bool
+    {
+        if (!is_array($data)) {
+            return false;
+        }
+        
+        $required = ['response', 'id'];
+        foreach ($required as $field) {
+            if (!isset($data[$field])) {
+                return false;
+            }
+        }
+        
+        if (!is_array($data['response'])) {
+            return false;
+        }
+        
+        $responseRequired = ['clientDataJSON', 'authenticatorData', 'signature'];
+        foreach ($responseRequired as $field) {
+            if (!isset($data['response'][$field])) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    /**
      * Process authentication response
      */
     public function processAuthentication($authenticationData, $challenge)
     {
         try {
+            // Validate input structure
+            if (!$this->validateAuthenticationData($authenticationData)) {
+                throw new \InvalidArgumentException('Invalid authentication data structure');
+            }
+            
+            if (empty($challenge)) {
+                throw new \InvalidArgumentException('Challenge cannot be empty');
+            }
+
             // Decode challenge
             $originalChallenge = base64_decode($challenge);
             
@@ -483,8 +599,10 @@ class PasskeyService
                 $credential = PasskeyCredential::get()->filter('CredentialID', $credentialIdAlternative)->first();
                 
                 if (!$credential) {
-                    error_log('Authentication Debug - No credential found with any format');
-                    error_log('Authentication Debug - Available credential IDs: ' . implode(', ', PasskeyCredential::get()->column('CredentialID')));
+                    $this->logger->warning('Authentication attempt with unknown credential', [
+                        'credential_id' => substr($credentialIdBase64Url, 0, 8) . '...',
+                        'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+                    ]);
                     throw new \Exception('Credential not found');
                 }
             }
@@ -575,13 +693,21 @@ class PasskeyService
             $userAgent = !empty($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : null;
             $credential->updateUsage($updatedSource->counter, $userAgent);
             
-            error_log("PasskeyService: Updated credential usage - ID: {$credential->CredentialID}, LastUsed: {$credential->LastUsed}, SignCount: {$credential->SignCount}");
+            // Log successful authentication
+            $this->logger->info('Successful passkey authentication', [
+                'member_id' => $credential->Member()->ID,
+                'credential_id' => substr($credential->CredentialID, 0, 8) . '...',
+                'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+            ]);
             
             return $credential->Member();
             
         } catch (\Throwable $ex) {
-            error_log('Authentication verification error: ' . $ex->getMessage());
-            error_log('Stack trace: ' . $ex->getTraceAsString());
+            // Log failed authentication attempt
+            $this->logger->warning('Failed passkey authentication attempt', [
+                'error' => $ex->getMessage(),
+                'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+            ]);
             throw new \Exception('Authentication failed: ' . $ex->getMessage());
         }
     }

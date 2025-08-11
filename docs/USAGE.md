@@ -60,8 +60,15 @@ SS_ALLOWED_HOSTS="yourdomain.com,www.yourdomain.com,app.yourdomain.com"
 
 For detailed configuration including domain-specific names, subsite integration, and MFA compatibility, see:
 - [Host-Based Configuration Guide](HOST_BASED_CONFIG.md)
-- [RP Name Configuration Guide](RP_NAME_CONFIGURATION.md)
+- [RP Name Configuration Guide](RP_NAME_CONFIGURATION.md)  
 - [Optimization Guide](OPTIMIZATION_GUIDE.md)
+
+### Security Configuration
+
+The module includes enterprise-grade security with 6 layers of protection. For comprehensive security setup and testing:
+- **[🔒 Security Guide](SECURITY.md)** - Complete security implementation
+- **[🧪 Security Testing](SECURITY.md#security-testing--validation)** - Test your security layers
+- **[📊 Threat Analysis](SECURITY.md#threat-mitigation-matrix)** - Understanding threats and mitigations
 
 ## Templates and Styling
 

@@ -2,28 +2,44 @@
 
 ## Quick Links
 
-- **[Installation & Setup](../README.md)** - Get started quickly
-- **[Usage Guide](USAGE.md)** - How to use the module day-to-day
-- **[Configuration Guide](HOST_BASED_CONFIG.md)** - Complete configuration reference
+- **[📦 Installation & Setup](../README.md)** - Get started quickly
+- **[📖 Usage Guide](USAGE.md)** - How to use the module day-to-day
+- **[🔒 Security Guide](SECURITY.md)** - Multi-layer security implementation
+- **[⚙️ Configuration Guide](HOST_BASED_CONFIG.md)** - Complete configuration reference
 
 ## Core Documentation
 
 ### Getting Started
-- **[README](../README.md)** - Installation, requirements, and quick setup
-- **[Usage Guide](USAGE.md)** - Complete user and admin guide
-- **[Browser Compatibility](USAGE.md#browser-compatibility)** - Supported browsers and versions
+- **[📦 README](../README.md)** - Installation, requirements, and quick setup
+- **[📖 Usage Guide](USAGE.md)** - Complete user and admin guide
+- **[🔒 Security Guide](SECURITY.md)** - Enterprise security features and testing
+- **[🌐 Browser Compatibility](USAGE.md#browser-compatibility)** - Supported browsers and versions
 
 ### Configuration Guides
-- **[Host-Based Configuration](HOST_BASED_CONFIG.md)** - Recommended approach using SS_ALLOWED_HOSTS
-- **[RP Name Configuration](RP_NAME_CONFIGURATION.md)** - Flexible naming strategies for different domains
-- **[Dynamic Subsites](DYNAMIC_SUBSITES.md)** - Legacy subsite-specific configuration
-- **[Multiple Domains Guide](MULTIPLE_DOMAINS.md)** - Handling complex multi-domain setups
+- **[🏠 Host-Based Configuration](HOST_BASED_CONFIG.md)** - Recommended approach using SS_ALLOWED_HOSTS
+- **[🏷️ RP Name Configuration](RP_NAME_CONFIGURATION.md)** - Flexible naming strategies for different domains
+- **[🌍 Dynamic Subsites](DYNAMIC_SUBSITES.md)** - Legacy subsite-specific configuration
+- **[🌐 Multiple Domains Guide](MULTIPLE_DOMAINS.md)** - Handling complex multi-domain setups
 
 ### Advanced Features
-- **[Optimization Guide](OPTIMIZATION_GUIDE.md)** - Performance, theming, MFA, and subsites
-- **[MFA Integration](OPTIMIZATION_GUIDE.md#mfa-compatibility)** - SilverStripe MFA compatibility
-- **[Performance Optimization](OPTIMIZATION_GUIDE.md#code-efficiency-optimizations)** - Database indexes and caching
-- **[Custom Theming](OPTIMIZATION_GUIDE.md#customizable-styling-system)** - YAML-based color customization
+- **[⚡ Optimization Guide](OPTIMIZATION_GUIDE.md)** - Performance, theming, MFA, and subsites
+- **[🔐 MFA Integration](OPTIMIZATION_GUIDE.md#mfa-compatibility)** - SilverStripe MFA compatibility
+- **[🚀 Performance Optimization](OPTIMIZATION_GUIDE.md#code-efficiency-optimizations)** - Database indexes and caching
+- **[🎨 Custom Theming](OPTIMIZATION_GUIDE.md#customizable-styling-system)** - YAML-based color customization
+
+### Security & Best Practices
+- **[🔒 Security Implementation](SECURITY.md)** - Complete security guide with 6-layer protection
+- **[🧪 Security Testing](SECURITY.md#security-testing--validation)** - Test your security layers
+- **[📊 Threat Analysis](SECURITY.md#threat-mitigation-matrix)** - Threat mitigation matrix
+- **[🔍 Security Monitoring](SECURITY.md#security-monitoring)** - Log analysis and monitoring
+
+### Security & Best Practices
+- **[🔒 Security Implementation](SECURITY.md)** - Complete security guide with 6-layer protection
+- **[🧪 Security Testing](SECURITY.md#security-testing--validation)** - Test your security layers
+- **[📊 Threat Analysis](SECURITY.md#threat-mitigation-matrix)** - Threat mitigation matrix
+- **[🔍 Security Monitoring](SECURITY.md#security-monitoring)** - Log analysis and monitoring
+- **[🚨 Incident Response](SECURITY.md#incident-response)** - Security incident procedures
+- **[✅ Security Checklist](SECURITY.md#production-security-checklist)** - Pre-deployment security validation
 
 ## Configuration Approaches
 
@@ -73,19 +89,21 @@ Local development setup with proper domain handling.
 ## Technical References
 
 ### API Documentation
-- **JavaScript API**: [Usage Guide - JavaScript API](USAGE.md#javascript-api)
-- **PHP API**: [Usage Guide - PHP API](USAGE.md#php-api)
-- **Template Integration**: [Usage Guide - Templates](USAGE.md#templates-and-styling)
+- **[JavaScript API](USAGE.md#javascript-api)** - Client-side passkey integration
+- **[PHP API](USAGE.md#php-api)** - Server-side implementation
+- **[Template Integration](USAGE.md#templates-and-styling)** - Frontend integration
 
 ### Security & Best Practices
-- **Security Considerations**: [Usage Guide - Security](USAGE.md#security-considerations)
-- **HTTPS Requirements**: [Usage Guide - HTTPS Requirement](USAGE.md#https-requirement)
-- **Domain Validation**: [Host-Based Configuration - Security](HOST_BASED_CONFIG.md#security-advantages)
+- **[Security Architecture](SECURITY.md#security-architecture-overview)** - Multi-layer security design
+- **[Security Testing](SECURITY.md#security-testing--validation)** - Validate your implementation
+- **[HTTPS Requirements](USAGE.md#https-requirement)** - SSL/TLS configuration
+- **[Domain Validation](HOST_BASED_CONFIG.md#security-advantages)** - Origin protection
 
-### Troubleshooting
-- **Common Issues**: [Usage Guide - Troubleshooting](USAGE.md#troubleshooting)
-- **Debug Tools**: [Usage Guide - Debug Tools](USAGE.md#debug-tools)
-- **Error Messages**: [Usage Guide - Common Issues](USAGE.md#common-issues)
+### Troubleshooting & Support
+- **[Common Issues](USAGE.md#troubleshooting)** - Solutions to frequent problems
+- **[Debug Tools](USAGE.md#debug-tools)** - Development debugging
+- **[Error Messages](USAGE.md#common-issues)** - Understanding error codes
+- **[Security Logs](SECURITY.md#log-analysis)** - Monitor security events
 
 ## Migration Guides
 
