@@ -13,7 +13,7 @@ use Symfony\Component\Console\Input\InputInterface;
 
 class PasskeySSecurityMigrationTask extends BuildTask
 {
-    protected string $title = 'Passkey Security Migration Task';
+    protected string $title = 'Passkey Security Migration Task'; 
     
     protected static string $description = 'Migrates existing passkey credentials to new security fields and validates data integrity';
 
