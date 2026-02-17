@@ -2,24 +2,21 @@
 
 namespace GienieLab\PasskeyAuth\Task;
 
-use GienieLab\PasskeyAuth\Model\PasskeyCredential;
-use Psr\Log\LoggerInterface;
-use SilverStripe\Control\HTTPRequest;
-use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\BuildTask;
-use SilverStripe\PolyExecution\PolyOutput;
-use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputInterface;
+use SilverStripe\Control\HTTPRequest;
+use GienieLab\PasskeyAuth\Model\PasskeyCredential;
+use SilverStripe\Core\Injector\Injector;
+use Psr\Log\LoggerInterface;
 
 class PasskeySSecurityMigrationTask extends BuildTask
 {
-    protected string $title = 'Passkey Security Migration Task';
+    protected $title = 'Passkey Security Migration Task';
     
-    protected static string $description = 'Migrates existing passkey credentials to new security fields and validates data integrity';
+    protected $description = 'Migrates existing passkey credentials to new security fields and validates data integrity';
 
-     protected static string $commandName  = 'passkey-security-migration';
+    private static $segment = 'passkey-security-migration';
 
-    protected function execute(InputInterface $input, PolyOutput $output): int
+    public function run($request)
     {
         $logger = Injector::inst()->get(LoggerInterface::class);
         
@@ -58,7 +55,6 @@ class PasskeySSecurityMigrationTask extends BuildTask
                 $migrated++;
                 
                 echo "✓ Migrated credential {$credential->ID}\n";
-                return Command::SUCCESS;
                 
             } catch (\Exception $e) {
                 echo "❌ Error migrating credential {$credential->ID}: " . $e->getMessage() . "\n";
@@ -68,7 +64,6 @@ class PasskeySSecurityMigrationTask extends BuildTask
                     'credential_id' => $credential->ID,
                     'error' => $e->getMessage()
                 ]);
-                 return Command::FAILURE;
             }
         }
         
@@ -86,7 +81,5 @@ class PasskeySSecurityMigrationTask extends BuildTask
             'migrated' => $migrated,
             'errors' => $errors
         ]);
-        return $errors > 0 ? Command::FAILURE : Command::SUCCESS;
-    
     }
 }
