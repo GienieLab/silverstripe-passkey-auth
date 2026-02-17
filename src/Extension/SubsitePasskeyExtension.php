@@ -323,7 +323,7 @@ class PasskeyCredentialSubsiteExtension extends Extension
     /**
      * Ensure credentials are filtered by subsite
      */
-    public function augmentSQL(SQLSelect $query, DataQuery $dataQuery = null)
+    public function augmentSQL(SQLSelect $query, ?DataQuery $dataQuery = null)
     {
         if (Subsite::$disable_subsite_filter) {
             return;
