@@ -52,7 +52,7 @@ class PasskeyAuthenticator implements Authenticator
         return null;
     }
 
-    public function logIn(Member $member, $persistent = false, HTTPRequest $request = null)
+    public function logIn(Member $member, $persistent = false, ?HTTPRequest $request = null)
     {
         if (!$request) {
             $request = Controller::curr()->getRequest();
@@ -67,7 +67,7 @@ class PasskeyAuthenticator implements Authenticator
         return $member;
     }
 
-    public function logOut(HTTPRequest $request = null)
+    public function logOut(?HTTPRequest $request = null)
     {
         if (!$request) {
             $request = Controller::curr()->getRequest();
