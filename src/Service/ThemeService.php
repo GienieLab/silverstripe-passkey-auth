@@ -4,19 +4,19 @@ namespace GienieLab\PasskeyAuth\Service;
 
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injectable;
-use SilverStripe\View\ViewableData;
+use SilverStripe\View\ViewLayerData;
 
 /**
  * Service for managing theme configuration and CSS generation
  */
-class ThemeService extends ViewableData
+class ThemeService extends ViewLayerData
 {
     use Injectable, Configurable;
 
     /**
      * Get theme configuration
      */
-    public function getThemeConfig(): array
+    public function getThemeConfig(): ?array
     {
         return $this->config()->get('theme') ?: [];
     }
