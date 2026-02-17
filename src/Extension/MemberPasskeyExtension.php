@@ -2,7 +2,7 @@
 
 namespace GienieLab\PasskeyAuth\Extension;
 
-use SilverStripe\ORM\DataExtension;
+use SilverStripe\Core\Extension;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\GridField\GridField;
 use SilverStripe\Forms\GridField\GridFieldConfig_RecordEditor;
@@ -11,7 +11,7 @@ use SilverStripe\Forms\GridField\GridFieldAddNewButton;
 use SilverStripe\Forms\LiteralField;
 use GienieLab\PasskeyAuth\Model\PasskeyCredential;
 
-class MemberPasskeyExtension extends DataExtension
+class MemberPasskeyExtension extends Extension
 {
     private static $has_many = [
         'PasskeyCredentials' => PasskeyCredential::class,
