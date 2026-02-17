@@ -59,7 +59,7 @@ class PasskeyAuthController extends Controller
     /**
      * Check CSRF token for regular actions
      */
-    public function checkCSRF(HTTPRequest $request = null): bool
+    public function checkCSRF(?HTTPRequest $request = null): bool
     {
         if (!$request) {
             $request = $this->getRequest();
@@ -71,7 +71,7 @@ class PasskeyAuthController extends Controller
      * Custom security check for passkey actions
      * More lenient than CSRF but still secure for passkey flows
      */
-    public function checkPasskeyCSRF(HTTPRequest $request = null): bool
+    public function checkPasskeyCSRF(?HTTPRequest $request = null): bool
     {
         if (!$request) {
             $request = $this->getRequest();
